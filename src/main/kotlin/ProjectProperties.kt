@@ -3,8 +3,10 @@ import java.util.*
 
 class ProjectProperties {
     companion object {
-        val mainProperties: Properties get() = getProperties("/main.properties")
-        val sheetsProperties: Properties get() = getProperties("/sheets.properties")
+        val mainProperties: Properties
+            get() = getProperties("/main.properties")
+        val sheetsProperties: Properties
+            get() = getProperties("/sheets.properties")
         private fun getProperties(name: String): Properties {
             val properties = Properties()
             try {

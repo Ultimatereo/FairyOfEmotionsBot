@@ -1,5 +1,11 @@
 interface Constants {
     companion object {
+        val createTablesMessage: String =
+            """
+                Вот твоя таблица со всеми эмоциями и записями:
+                https://docs.google.com/spreadsheets/d/${ProjectProperties.sheetsProperties.getProperty("SHEETS_ID")}/edit#gid=0
+            """.trimIndent()
+        val WRITE_EMOTION = "Введите через запятую все эмоции, за которыми вы хотите следить"
         val HELP_MESSAGE =
             """ 
             Доступны следующие команды:
