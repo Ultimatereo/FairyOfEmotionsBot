@@ -3,15 +3,16 @@ import java.util.*
 
 class ProjectProperties {
     companion object {
-        val mainProperties: Properties
-            get() {
-                val properties = Properties()
-                try {
-                    properties.load(ProjectProperties::class.java.getResourceAsStream("/main.properties"))
-                } catch (e: Exception) {
-                    throw NoSuchFileException(Path.of("src/main/resources/main.properties").toFile())
-                }
-                return properties
+        val mainProperties: Properties get() = getProperties("/main.properties")
+        val sheetsProperties: Properties get() = getProperties("/sheets.properties")
+        private fun getProperties(name: String): Properties {
+            val properties = Properties()
+            try {
+                properties.load(ProjectProperties::class.java.getResourceAsStream(name))
+            } catch (e: Exception) {
+                throw NoSuchFileException(Path.of("src/main/resources/$name").toFile())
             }
+            return properties
+        }
     }
 }
