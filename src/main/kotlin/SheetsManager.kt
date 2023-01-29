@@ -75,7 +75,6 @@ object SheetsManager {
     }
 
     private fun insertRow(list: List<String>, range: String) {
-
         val requestBody = ValueRange()
         requestBody.majorDimension = "ROWS"
         requestBody.range = range
@@ -86,6 +85,22 @@ object SheetsManager {
         request.insertDataOption = insertDataOption
         val response : AppendValuesResponse = request.execute()
         println(response)
+    }
+
+    fun getAllEmotions(): List<String> {
+        val request = service.spreadsheets().values().get(sheetsId, emotionRange)
+        val response = request.execute()
+        val values = response.getValues() ?: return listOf()
+        val list = mutableListOf<String>()
+        for (row in values) {
+            for (element in row) {
+                if (element.toString().isNotEmpty()) {
+                    list.add(element.toString())
+                }
+            }
+        }
+        println(list)
+        return list
     }
 
 }

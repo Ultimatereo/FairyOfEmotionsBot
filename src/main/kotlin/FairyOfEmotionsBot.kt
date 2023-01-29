@@ -1,8 +1,3 @@
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
-import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.json.JsonFactory
-import com.google.api.client.json.gson.GsonFactory
-import com.google.api.services.sheets.v4.Sheets
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
@@ -11,7 +6,9 @@ import org.telegram.telegrambots.meta.api.objects.Update
 object FairyOfEmotionsBot : TelegramLongPollingBot() {
     private var token = ""
     private var dialogId = 0
-
+    private var emotions = listOf<String>()
+    private var currentIndex = 0
+    private var currentRate = -1
     override fun getBotToken(): String {
         if (token.isEmpty()) {
             token = ProjectProperties.mainProperties.getProperty("BOT_TOKEN")
@@ -51,7 +48,20 @@ object FairyOfEmotionsBot : TelegramLongPollingBot() {
                     createMessage(chatId, Constants.WRITE_EMOTION)
                     dialogId = 2
                 } else if (update.message.text.endsWith("addRate")) {
-                    TODO()
+                    if (dialogId >= 3) {
+                        createMessage(
+                            chatId, "Запись оценки по эмоциям в процессе! " +
+                                    "Ответьте, пожалуйста, на последний вопрос!"
+                        )
+                    } else {
+                        emotions = SheetsManager.getAllEmotions()
+                        dialogId = 3
+                        currentIndex = 0
+                        createMessage(chatId, Constants.RATE_EMOTIONS)
+                        createMessage(chatId, Constants.rateEmotion(emotions[currentIndex]))
+                    }
+                } else if (update.message.text.endsWith("getEmotions")) {
+                    createMessage(chatId, Constants.WRITE_ALL_EMOTIONS)
                 } else if (dialogId != 0) {
                     when (dialogId) {
                         1 -> {
@@ -64,15 +74,36 @@ object FairyOfEmotionsBot : TelegramLongPollingBot() {
                             dialogId = 0
                         }
                         2 -> {
-                            val emotions = update.message.text.filterNot { it.isWhitespace() }.split(",")
-                            for (emotion in emotions) {
+                            val emotionsForPrinting: List<String> =
+                                update.message.text.filterNot { it.isWhitespace() }.split(",")
+                            for (emotion in emotionsForPrinting) {
                                 SheetsManager.addEmotion(emotion)
                             }
                             dialogId = 0
                             createMessage(chatId, "Всё успешно добавлено!")
                         }
+                        3 -> {
+                            var isCorrect = false
+                            try {
+                                currentRate = update.message.text.toInt()
+                                if ((10 > currentRate) && (currentRate > 0)) {
+                                    isCorrect = true
+                                }
+                            } catch (e: Exception) {
+                                isCorrect = false
+                            }
+                            if (isCorrect) {
+                                SheetsManager.addRate(emotions[currentIndex++], currentRate)
+                                if (currentIndex == emotions.size) {
+                                    dialogId = 0
+                                    createMessage(chatId, "Поздравляю, чекап завершён!")
+                                }
+                            } else {
+                                createMessage(chatId, "Введите оценку ещё раз. Оценка должна быть от 1 до 10!")
+                            }
+                            createMessage(chatId, Constants.rateEmotion(emotions[currentIndex]))
+                        }
                     }
-                    dialogId = 0
                 } else {
                     createMessage(chatId, Constants.UNKNOWN_MESSAGE)
                 }
