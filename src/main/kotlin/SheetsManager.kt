@@ -16,6 +16,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStreamReader
+import java.text.SimpleDateFormat
 import java.util.*
 
 
@@ -69,7 +70,7 @@ object SheetsManager {
 
     fun addRate(emotion: String, rate: Int) {
         insertRow(
-            mutableListOf(Calendar.getInstance().time.toString(), emotion, rate.toString()),
+            mutableListOf(SimpleDateFormat("HH:mm dd.MM.yyyy").format(Date()), emotion, rate.toString()),
             ratesRange
         )
     }
