@@ -65,7 +65,11 @@ object SheetsManager {
     private const val valueInputOption = "USER_ENTERED"
 
     fun addEmotion(emotion: String) {
-        insertRow(mutableListOf(emotion), emotionRange)
+        addEmotions(listOf(emotion))
+    }
+
+    fun addEmotions(emotions: List<String>) {
+        insertColumn(emotions, emotionRange)
     }
 
     fun addRate(emotion: String, rate: Int) {
@@ -75,9 +79,9 @@ object SheetsManager {
         )
     }
 
-    private fun insertRow(list: List<String>, range: String) {
+    private fun insert(list: List<String>, range: String, majorDimension: String) {
         val requestBody = ValueRange()
-        requestBody.majorDimension = "ROWS"
+        requestBody.majorDimension = majorDimension
         requestBody.range = range
         requestBody.setValues(mutableListOf(list) as List<MutableList<Any>>?)
         val request : Sheets.Spreadsheets.Values.Append =
@@ -87,7 +91,12 @@ object SheetsManager {
         val response : AppendValuesResponse = request.execute()
         println(response)
     }
-
+    private fun insertColumn(list: List<String>, range: String) {
+        insert(list, range, "COLUMNS")
+    }
+    private fun insertRow(list: List<String>, range: String) {
+        insert(list, range, "ROWS")
+    }
     fun getAllEmotions(): List<String> {
         val request = service.spreadsheets().values().get(sheetsId, emotionRange)
         val response = request.execute()
@@ -103,5 +112,4 @@ object SheetsManager {
         println(list)
         return list
     }
-
 }

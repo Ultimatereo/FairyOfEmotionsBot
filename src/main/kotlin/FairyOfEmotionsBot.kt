@@ -76,9 +76,7 @@ object FairyOfEmotionsBot : TelegramLongPollingBot() {
                         2 -> {
                             val emotionsForPrinting: List<String> =
                                 update.message.text.filterNot { it.isWhitespace() }.split(",")
-                            for (emotion in emotionsForPrinting) {
-                                SheetsManager.addEmotion(emotion)
-                            }
+                            SheetsManager.addEmotions(emotionsForPrinting)
                             dialogId = 0
                             createMessage(chatId, "Всё успешно добавлено!")
                         }
