@@ -7,6 +7,7 @@ class ProjectProperties {
             get() = getProperties("/main.properties")
         val sheetsProperties: Properties
             get() = getProperties("/sheets.properties")
+
         private fun getProperties(name: String): Properties {
             val properties = Properties()
             try {

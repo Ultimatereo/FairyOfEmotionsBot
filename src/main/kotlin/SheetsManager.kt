@@ -8,31 +8,36 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.JsonFactory
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.store.FileDataStoreFactory
+import com.google.api.services.drive.Drive
+import com.google.api.services.drive.model.Permission
 import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
-import com.google.api.services.sheets.v4.model.AppendValuesResponse
-import com.google.api.services.sheets.v4.model.ValueRange
+import com.google.api.services.sheets.v4.model.*
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.api.services.drive.model.File as DriveFile
 
 
 object SheetsManager {
     private const val APPLICATION_NAME = "Fairy Of Emotions"
     private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
     private const val TOKENS_DIRECTORY_PATH = "tokens"
-
-    private val SCOPES = listOf(SheetsScopes.SPREADSHEETS)
+    private val SCOPES = SheetsScopes.all()
     private const val CREDENTIALS_FILE_PATH = "/credentials.json"
 
-    private val sheetsId = ProjectProperties.sheetsProperties.getProperty("SHEETS_ID")
+    private val sheetsSampleId = ProjectProperties.sheetsProperties.getProperty("SHEETS_SAMPLE_ID")
+    private val sheetsDataId = ProjectProperties.sheetsProperties.getProperty("SHEETS_DATA_ID")
     private val HTTP_TRANSPORT: NetHttpTransport = GoogleNetHttpTransport.newTrustedTransport()
-    private val service: Sheets = Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+    private val credentials: Credential = getCredentials(HTTP_TRANSPORT)
+    private val sheetsService: Sheets = Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
         .setApplicationName(APPLICATION_NAME)
         .build()
+    private val driveService: Drive = Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
+        .setApplicationName(APPLICATION_NAME).build()
 
     /**
      * Creates an authorized Credential object.
@@ -61,44 +66,76 @@ object SheetsManager {
 
     private const val emotionRange = "Эмоции!A2:A"
     private const val ratesRange = "Записи!A2:A"
+    private const val dataRange = "tgAndSheetsId!A2:B"
     private const val insertDataOption = "INSERT_ROWS"
     private const val valueInputOption = "USER_ENTERED"
 
-    fun addEmotion(emotion: String) {
-        addEmotions(listOf(emotion))
+
+    fun givePermissionToSpreadsheet(id: String, email: String) {
+        val newPermission = Permission()
+        newPermission.type = "user"
+        newPermission.role = "writer"
+        newPermission.emailAddress = email
+        driveService.permissions().create(id, newPermission).execute()
     }
 
-    fun addEmotions(emotions: List<String>) {
-        insertColumn(emotions, emotionRange)
+    fun createSpreadsheetFairy(title: String = "Фея Эмоций"): String {
+        val newSheetsId = driveService.files().copy(sheetsSampleId, DriveFile()).execute().id
+        val requests = mutableListOf<Request>()
+        requests.add(
+            Request()
+                .setUpdateSpreadsheetProperties(
+                    UpdateSpreadsheetPropertiesRequest()
+                        .setProperties(
+                            SpreadsheetProperties()
+                                .setTitle(title)
+                        )
+                        .setFields("title")
+                )
+        )
+        val body = BatchUpdateSpreadsheetRequest().setRequests(requests)
+        sheetsService.spreadsheets().batchUpdate(newSheetsId, body).execute()
+        return newSheetsId
     }
 
-    fun addRate(emotion: String, rate: Int) {
+    fun addEmotion(emotion: String, sheetsId: String) {
+        addEmotions(listOf(emotion), sheetsId)
+    }
+
+    fun addEmotions(emotions: List<String>, sheetsId: String) {
+        insertColumn(emotions, emotionRange, sheetsId)
+    }
+
+    fun addRate(emotion: String, rate: Int, sheetsId: String) {
         insertRow(
             mutableListOf(SimpleDateFormat("HH:mm dd.MM.yyyy").format(Date()), emotion, rate.toString()),
-            ratesRange
+            ratesRange, sheetsId
         )
     }
 
-    private fun insert(list: List<String>, range: String, majorDimension: String) {
+    private fun insert(list: List<String>, range: String, majorDimension: String, sheetsId: String) {
         val requestBody = ValueRange()
         requestBody.majorDimension = majorDimension
         requestBody.range = range
-        requestBody.setValues(mutableListOf(list) as List<MutableList<Any>>?)
-        val request : Sheets.Spreadsheets.Values.Append =
-            service.spreadsheets().values().append(sheetsId, range, requestBody)
+        requestBody.setValues(mutableListOf(list) as List<MutableList<Any>>)
+        val request: Sheets.Spreadsheets.Values.Append =
+            sheetsService.spreadsheets().values().append(sheetsId, range, requestBody)
         request.valueInputOption = valueInputOption
         request.insertDataOption = insertDataOption
-        val response : AppendValuesResponse = request.execute()
+        val response: AppendValuesResponse = request.execute()
         println(response)
     }
-    private fun insertColumn(list: List<String>, range: String) {
-        insert(list, range, "COLUMNS")
+
+    private fun insertColumn(list: List<String>, range: String, sheetsId: String) {
+        insert(list, range, "COLUMNS", sheetsId)
     }
-    private fun insertRow(list: List<String>, range: String) {
-        insert(list, range, "ROWS")
+
+    private fun insertRow(list: List<String>, range: String, sheetsId: String) {
+        insert(list, range, "ROWS", sheetsId)
     }
-    fun getAllEmotions(): List<String> {
-        val request = service.spreadsheets().values().get(sheetsId, emotionRange)
+
+    fun getAllEmotions(sheetsId: String): List<String> {
+        val request = sheetsService.spreadsheets().values().get(sheetsId, emotionRange)
         val response = request.execute()
         val values = response.getValues() ?: return listOf()
         val list = mutableListOf<String>()
@@ -111,5 +148,19 @@ object SheetsManager {
         }
         println(list)
         return list
+    }
+
+    fun addClient(sheetsId: String, chatId: String) {
+        insertRow(mutableListOf(chatId, sheetsId), dataRange, sheetsDataId)
+    }
+
+    fun getChatIdAndSheetsId(map: MutableMap<Long, String>) {
+        val request = sheetsService.spreadsheets().values().get(sheetsDataId, dataRange)
+        val response = request.execute()
+        val values = response.getValues() ?: return
+        for (row in values) {
+            map[row[0].toString().toLong()] = row[1].toString()
+        }
+        println(map)
     }
 }
