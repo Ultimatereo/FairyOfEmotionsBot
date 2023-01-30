@@ -10,7 +10,7 @@ import properties.ProjectProperties
 import sheets.SheetsManager
 
 
-object FairyOfEmotionsBot : TelegramLongPollingBot(), ReminderTask.Callback {
+object FOEBot : TelegramLongPollingBot(), ReminderTask.Callback {
     class EmailValidator {
         companion object {
             @JvmStatic
@@ -21,16 +21,28 @@ object FairyOfEmotionsBot : TelegramLongPollingBot(), ReminderTask.Callback {
         }
     }
 
-    private val dailyTaskExecutor: DailyTaskExecutor = DailyTaskExecutor(ReminderTask(this))
+    private val dailyTaskExecutor = mutableMapOf<Long, DailyTaskExecutor>()
+
+    //    private val dailyTaskExecutor: DailyTaskExecutor = DailyTaskExecutor(ReminderTask(this))
     private var token = ""
-    private var dialogMode = mutableMapOf<Long, Int>() //0
-    private var emotions = mutableMapOf<Long, List<String>>()
-    private var currentIndex = mutableMapOf<Long, Int>() //0
+    private val dialogMode = mutableMapOf<Long, Int>() //0
+    private val emotions = mutableMapOf<Long, List<String>>()
+    private val currentIndex = mutableMapOf<Long, Int>() //0
     private val chatIdAndSheetsId = mutableMapOf<Long, String>()
-    private var isMapUpdated = false
+
     init {
-        dailyTaskExecutor.startExecutionAt(18, 21, 59)
+        try {
+            SheetsManager.updateMaps(chatIdAndSheetsId, dailyTaskExecutor, this)
+        } catch (e: Exception) {
+            System.err.println("Updating chat ids and sheets ids failed!")
+            e.printStackTrace()
+        }
+        for (element in chatIdAndSheetsId) {
+            dialogMode[element.key] = 0
+            currentIndex[element.key] = 0
+        }
     }
+
     override fun getBotToken(): String {
         if (token.isEmpty()) {
             token = ProjectProperties.mainProperties.getProperty("BOT_TOKEN")
@@ -46,20 +58,6 @@ object FairyOfEmotionsBot : TelegramLongPollingBot(), ReminderTask.Callback {
     }
 
     override fun onUpdateReceived(update: Update?) {
-        if (!isMapUpdated) {
-            try {
-                SheetsManager.getChatIdAndSheetsId(chatIdAndSheetsId)
-                isMapUpdated = true
-            } catch (e: Exception) {
-                System.err.println("Updating chat ids and sheets ids failed!")
-                e.printStackTrace()
-                return
-            }
-            for (element in chatIdAndSheetsId) {
-                dialogMode[element.key] = 0
-                currentIndex[element.key] = 0
-            }
-        }
         if (update == null || update.message == null || update.message.chatId == null) {
             return
         }
@@ -136,6 +134,23 @@ object FairyOfEmotionsBot : TelegramLongPollingBot(), ReminderTask.Callback {
                 createMessage(chatId, Strings.LINK_EMAIL)
                 dialogMode[chatId] = 1
             }
+            "/set_time" -> {
+                createMessage(chatId, Strings.SET_TIME)
+                dialogMode[chatId] = 4
+            }
+            "/cancel_reminder" -> {
+                createMessage(chatId, Strings.CANCEL_REMINDER)
+                if (dailyTaskExecutor.containsKey(chatId)) {
+                    dailyTaskExecutor[chatId]!!.stop()
+                    dailyTaskExecutor.remove(chatId)
+                }
+                try {
+                    SheetsManager.cancelReminder(chatId.toString(), getSheetsId(chatId))
+                    createMessage(chatId, Strings.CANCEL_REMINDER_SUCCESS)
+                } catch (e: Exception) {
+                    createMessage(chatId, Strings.CANCEL_REMINDER_FAIL)
+                }
+            }
             else -> {
                 when (dialogMode[chatId]) {
                     1 -> {
@@ -188,7 +203,7 @@ object FairyOfEmotionsBot : TelegramLongPollingBot(), ReminderTask.Callback {
                                 getSheetsId(chatId)
                             )
                             currentIndex[chatId] = currentIndex[chatId]!! + 1
-                            if (currentIndex[chatId] == emotions.size) {
+                            if (currentIndex[chatId] == emotions[chatId]!!.size) {
                                 dialogMode[chatId] = 0
                                 createMessage(chatId, Strings.RATE_END)
                             }
@@ -196,6 +211,28 @@ object FairyOfEmotionsBot : TelegramLongPollingBot(), ReminderTask.Callback {
                             createMessage(chatId, Strings.RATE_RETRY)
                         }
                         createMessage(chatId, Strings.rateEmotion(emotions[chatId]!![currentIndex[chatId]!!]))
+                    }
+                    4 -> {
+                        try {
+                            val hoursAndMinutes = update.message.text.split(":")
+                            val hours = hoursAndMinutes[0].toInt()
+                            val minutes = hoursAndMinutes[1].toInt()
+                            val dailyTaskExecutorValue = DailyTaskExecutor(ReminderTask(this))
+                            dailyTaskExecutorValue.startExecutionAt(
+                                hours,
+                                minutes,
+                                0, chatId
+                            )
+                            if (dailyTaskExecutor.containsKey(chatId)) {
+                                dailyTaskExecutor[chatId]!!.stop()
+                            }
+                            dailyTaskExecutor[chatId] = dailyTaskExecutorValue
+                            SheetsManager.setTime(chatId.toString(), getSheetsId(chatId), hours, minutes)
+                            createMessage(chatId, Strings.SET_TIME_SUCCESS)
+                        } catch (e: Exception) {
+                            createMessage(chatId, Strings.SET_TIME_FAIL)
+                        }
+                        dialogMode[chatId] = 0
                     }
                     else -> createMessage(chatId, Strings.UNKNOWN_MESSAGE)
                 }
@@ -217,13 +254,13 @@ object FairyOfEmotionsBot : TelegramLongPollingBot(), ReminderTask.Callback {
         }
     }
 
-    override fun onTimeForDailyTask() {
-        for (element in chatIdAndSheetsId) {
-            createMessage(element.key,
-                """
-                Это твоё ежедневное напоминание! 
-                Скорее пиши /add_rate и записывай, как ты себя чувствуешь <3 
-                """.trimIndent())
-        }
+    override fun onTimeForDailyTask(chatId: Long) {
+        createMessage(
+            chatId,
+            """
+            Это твоё ежедневное напоминание! 
+            Скорее пиши /add_rate и записывай, как ты себя чувствуешь <3 
+            """.trimIndent()
+        )
     }
 }

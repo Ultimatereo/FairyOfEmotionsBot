@@ -4,6 +4,25 @@ import sheets.SheetsManager
 
 interface Strings {
     companion object {
+        val SET_TIME_FAIL: String = "Данные были введены неверно. Попробуйте ещё раз."
+        val SET_TIME_SUCCESS: String = "Напоминалка успешно поставлена!"
+        val CANCEL_REMINDER_FAIL: String =
+            """
+                Не получилось отключить напоминалку(
+            """.trimIndent()
+        val CANCEL_REMINDER_SUCCESS: String =
+            """
+                Напоминалка успешно отключена
+            """.trimIndent()
+        val CANCEL_REMINDER: String =
+            """
+                Отменяю напоминалку...
+            """.trimIndent()
+        val SET_TIME: String =
+            """
+            Введи, пожалуйста, время по МСК в формате HH:mm
+            Например, 10:00
+            """.trimIndent()
         val LINK_EMAIL: String =
             """
                 Введите, пожалуйста, почту gmail или любую другую, привязанную к гуглу.

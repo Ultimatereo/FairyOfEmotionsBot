@@ -1,6 +1,5 @@
 package sheets
 
-import properties.ProjectProperties
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
@@ -16,6 +15,9 @@ import com.google.api.services.drive.model.Permission
 import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
+import daily.DailyTaskExecutor
+import daily.ReminderTask
+import properties.ProjectProperties
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -67,9 +69,9 @@ object SheetsManager {
         return AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
     }
 
-    private val emotionRange = ProjectProperties.sheetsProperties.getProperty("SHEETS_EMOTION_RANGE")
-    private val ratesRange = ProjectProperties.sheetsProperties.getProperty("SHEETS_RATES_RANGE")
-    private val dataRange = ProjectProperties.sheetsProperties.getProperty("SHEETS_DATA_RANGE")
+    private const val emotionRange = "Эмоции!A2:A"
+    private const val ratesRange = "Записи!A2:A"
+    private const val dataRange = "data!A2:D"
     private const val insertDataOption = "INSERT_ROWS"
     private const val valueInputOption = "USER_ENTERED"
 
@@ -120,13 +122,12 @@ object SheetsManager {
         val requestBody = ValueRange()
         requestBody.majorDimension = majorDimension
         requestBody.range = range
-        requestBody.setValues(mutableListOf(list) as List<MutableList<Any>>)
+        requestBody.setValues(mutableListOf(list) as List<List<Any>>)
         val request: Sheets.Spreadsheets.Values.Append =
             sheetsService.spreadsheets().values().append(sheetsId, range, requestBody)
         request.valueInputOption = valueInputOption
         request.insertDataOption = insertDataOption
-        val response: AppendValuesResponse = request.execute()
-        println(response)
+        request.execute()
     }
 
     private fun insertColumn(list: List<String>, range: String, sheetsId: String) {
@@ -149,7 +150,7 @@ object SheetsManager {
                 }
             }
         }
-        println(list)
+        System.err.println(list)
         return list
     }
 
@@ -157,13 +158,44 @@ object SheetsManager {
         insertRow(mutableListOf(chatId, sheetsId), dataRange, sheetsDataId)
     }
 
-    fun getChatIdAndSheetsId(map: MutableMap<Long, String>) {
+    fun updateMaps(
+        mapIds: MutableMap<Long, String>,
+        mapDaily: MutableMap<Long, DailyTaskExecutor>,
+        callback: ReminderTask.Callback
+    ) {
         val request = sheetsService.spreadsheets().values().get(sheetsDataId, dataRange)
         val response = request.execute()
         val values = response.getValues() ?: return
         for (row in values) {
-            map[row[0].toString().toLong()] = row[1].toString()
+            val chatId = row[0].toString().toLong()
+            val sheetsIdValue = row[1].toString()
+            mapIds[chatId] = sheetsIdValue
+            if (row.size == 4 && row[2].toString().isNotEmpty() && row[3].toString().isNotEmpty()) {
+                val dailyTask = DailyTaskExecutor(ReminderTask(callback))
+                dailyTask.startExecutionAt(
+                    row[2].toString().toInt(),
+                    row[3].toString().toInt(),
+                    0,
+                    chatId
+                )
+                if (mapDaily.containsKey(chatId)) {
+                    mapDaily[chatId]!!.stop()
+                }
+                mapDaily[chatId] = dailyTask
+            } else if (mapDaily.containsKey(chatId)) {
+                mapDaily[chatId]!!.stop()
+                mapDaily.remove(chatId)
+            }
         }
-        println(map)
+        System.err.println(mapIds)
+        System.err.println(mapDaily)
+    }
+
+    fun setTime(chatId: String, sheetsId: String, hours: Int, minutes: Int) {
+        insertRow(mutableListOf(chatId, sheetsId, hours.toString(), minutes.toString()), dataRange, sheetsDataId)
+    }
+
+    fun cancelReminder(chatId: String, sheetsId: String) {
+        addClient(sheetsId, chatId)
     }
 }

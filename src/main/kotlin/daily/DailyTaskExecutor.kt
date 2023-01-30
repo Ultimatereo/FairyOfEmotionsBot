@@ -13,10 +13,10 @@ class DailyTaskExecutor(dailyTask: DailyTask) {
     private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
     private val dailyTask: DailyTask
 
-    fun startExecutionAt(targetHour: Int, targetMin: Int, targetSec: Int) {
+    fun startExecutionAt(targetHour: Int, targetMin: Int, targetSec: Int, chatId: Long) {
         val taskWrapper = Runnable {
-            dailyTask.execute()
-            startExecutionAt(targetHour, targetMin, targetSec)
+            dailyTask.execute(chatId)
+            startExecutionAt(targetHour, targetMin, targetSec, chatId)
         }
         val delay = computeNextDelay(targetHour, targetMin, targetSec)
         executorService.schedule(taskWrapper, delay, TimeUnit.SECONDS)
@@ -33,13 +33,7 @@ class DailyTaskExecutor(dailyTask: DailyTask) {
     }
 
     fun stop() {
-        executorService.shutdown()
-        try {
-            executorService.awaitTermination(1, TimeUnit.DAYS)
-        } catch (e: InterruptedException) {
-            System.err.println("Something went wrong when trying to stop DailyTaskExecutor")
-            e.printStackTrace()
-        }
+        executorService.shutdownNow()
     }
 
     init {

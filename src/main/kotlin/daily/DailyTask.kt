@@ -1,5 +1,5 @@
 package daily
 
 interface DailyTask {
-    fun execute()
+    fun execute(chatId: Long)
 }
