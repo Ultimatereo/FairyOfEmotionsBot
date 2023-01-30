@@ -1,3 +1,7 @@
+package constants
+
+import sheets.SheetsManager
+
 interface Strings {
     companion object {
         val LINK_EMAIL: String =
