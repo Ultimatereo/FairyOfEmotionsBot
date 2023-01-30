@@ -64,9 +64,9 @@ object SheetsManager {
         return AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
     }
 
-    private const val emotionRange = "Эмоции!A2:A"
-    private const val ratesRange = "Записи!A2:A"
-    private const val dataRange = "tgAndSheetsId!A2:B"
+    private val emotionRange = ProjectProperties.sheetsProperties.getProperty("SHEETS_EMOTION_RANGE")
+    private val ratesRange = ProjectProperties.sheetsProperties.getProperty("SHEETS_RATES_RANGE")
+    private val dataRange = ProjectProperties.sheetsProperties.getProperty("SHEETS_DATA_RANGE")
     private const val insertDataOption = "INSERT_ROWS"
     private const val valueInputOption = "USER_ENTERED"
 
