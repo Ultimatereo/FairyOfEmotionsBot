@@ -1,5 +1,10 @@
 interface Strings {
     companion object {
+        val LINK_EMAIL: String =
+            """
+                Введите, пожалуйста, почту gmail или любую другую, привязанную к гуглу.
+                Если вы введёте почту, никак не связанную с гуглом, то вы не получите доступ к таблице
+            """.trimIndent()
         const val RATE_RETRY = "Введите оценку ещё раз. Оценка должна быть от 1 до 10!"
         const val RATE_END = "Поздравляю, чекап завершён!"
         const val EMOTION_ADD_SUCCESS = "Всё успешно добавлено!"
@@ -12,7 +17,12 @@ interface Strings {
         const val RATE_IN_PROCCESS = "Запись оценки по эмоциям в процессе! " +
                 "Ответьте, пожалуйста, на последний вопрос!"
         const val CANCELLATION_SUCCESS = "Команда успешно отменена!"
-        const val END_REG = "Завершите регистрацию!"
+        val END_REG =
+            """
+                Привязка почты прервана успешно. 
+                Если к таблице не будет привязана ваша почта, то вы не получите доступ к ней.
+                Вы можете привязать почту через команду /link_email
+            """.trimIndent()
         const val START = "Введите /start для начала работы с ботом!"
         fun rateEmotion(emotion: String): String {
             return "Оцени, как сильно ты сегодня проявлял(а) эмоцию '$emotion' от 1 до 10"
@@ -35,6 +45,10 @@ interface Strings {
                 https://docs.google.com/spreadsheets/d/$sheetsId/edit#gid=0
             """.trimIndent()
 
+        fun accessIsGivenTo(email: String): String {
+            return "Доступ к таблице успешно выдан на почту $email"
+        }
+
         const val WRITE_EMOTION =
             "Введите через запятую все эмоции, за которыми вы хотите следить. \nДля отмены операции введите /cancel."
         val HELP_MESSAGE =
@@ -47,6 +61,7 @@ interface Strings {
             /add_emotion - Добавить эмоцию в список трекаемых эмоций
             /add_rate - Добавить запись, оценку эмоций     `
             /get_emotions - Выводит список всех трекуемых эмоций через запятую
+            /link_email - Привязать почту к таблице
             """.trimIndent()
         val START_MESSAGE =
             """

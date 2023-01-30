@@ -53,9 +53,9 @@ object FairyOfEmotionsBot : TelegramLongPollingBot() {
                 createMessage(chatId, Strings.START)
             } else {
                 try {
-                    if (update.message.text.endsWith("help")) {
+                    if (update.message.text == "/help") {
                         createMessage(chatId, Strings.HELP_MESSAGE)
-                    } else if (update.message.text.endsWith("start")) {
+                    } else if (update.message.text =="/start") {
                         if (chatIdAndSheetsId.containsKey(chatId)) {
                             createMessage(chatId, Strings.createTablesMessage(getSheetsId(chatId)))
                         } else {
@@ -65,19 +65,19 @@ object FairyOfEmotionsBot : TelegramLongPollingBot() {
                             createMessage(chatId, Strings.START_MESSAGE)
                             dialogId = 1
                         }
-                    } else if (update.message.text.endsWith("tables")) {
+                    } else if (update.message.text == "/tables") {
                         createMessage(chatId, Strings.createTablesMessage(getSheetsId(chatId)))
-                    } else if (update.message.text.endsWith("cancel")) {
+                    } else if (update.message.text == "/cancel") {
                         if (dialogId == 1) {
                             createMessage(chatId, Strings.END_REG)
                         } else {
-                            dialogId = 0
                             createMessage(chatId, Strings.CANCELLATION_SUCCESS)
                         }
-                    } else if (update.message.text.endsWith("add_emotion")) {
+                        dialogId = 0
+                    } else if (update.message.text == "/add_emotion") {
                         createMessage(chatId, Strings.WRITE_EMOTION)
                         dialogId = 2
-                    } else if (update.message.text.endsWith("add_rate")) {
+                    } else if (update.message.text =="/add_rate") {
                         if (dialogId >= 3) {
                             createMessage(chatId, Strings.RATE_IN_PROCCESS)
                         } else {
@@ -87,8 +87,11 @@ object FairyOfEmotionsBot : TelegramLongPollingBot() {
                             createMessage(chatId, Strings.RATE_EMOTIONS)
                             createMessage(chatId, Strings.rateEmotion(emotions[currentIndex]))
                         }
-                    } else if (update.message.text.endsWith("get_emotions")) {
+                    } else if (update.message.text =="/get_emotions") {
                         createMessage(chatId, Strings.writeAllEmotions(getSheetsId(chatId)))
+                    } else if (update.message.text == "/link_email") {
+                        createMessage(chatId, Strings.LINK_EMAIL)
+                        dialogId = 1
                     } else if (dialogId != 0) {
                         when (dialogId) {
                             1 -> {
@@ -98,6 +101,7 @@ object FairyOfEmotionsBot : TelegramLongPollingBot() {
                                         SheetsManager.givePermissionToSpreadsheet(
                                             getSheetsId(chatId), email
                                         )
+                                        createMessage(chatId, Strings.accessIsGivenTo(email))
                                         createMessage(chatId, Strings.createTablesMessage(getSheetsId(chatId)))
                                         dialogId = 0
                                     } catch (e: Exception) {
