@@ -85,6 +85,8 @@ interface Strings {
             /add_rate - Добавить запись, оценку эмоций     `
             /get_emotions - Выводит список всех трекуемых эмоций через запятую
             /link_email - Привязать почту к таблице
+            /set_time - Установить или изменить время напоминания
+            /cancel_reminder - Отключить функцию напоминания
             """.trimIndent()
         val START_MESSAGE =
             """
