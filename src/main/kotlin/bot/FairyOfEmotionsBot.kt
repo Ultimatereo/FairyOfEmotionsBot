@@ -1,13 +1,16 @@
 package bot
 
 import constants.Strings
-import properties.ProjectProperties
-import sheets.SheetsManager
+import daily.DailyTaskExecutor
+import daily.ReminderTask
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
+import properties.ProjectProperties
+import sheets.SheetsManager
 
-object FairyOfEmotionsBot : TelegramLongPollingBot() {
+
+object FairyOfEmotionsBot : TelegramLongPollingBot(), ReminderTask.Callback {
     class EmailValidator {
         companion object {
             @JvmStatic
@@ -18,13 +21,16 @@ object FairyOfEmotionsBot : TelegramLongPollingBot() {
         }
     }
 
+    private val dailyTaskExecutor: DailyTaskExecutor = DailyTaskExecutor(ReminderTask(this))
     private var token = ""
     private var dialogMode = mutableMapOf<Long, Int>() //0
     private var emotions = mutableMapOf<Long, List<String>>()
     private var currentIndex = mutableMapOf<Long, Int>() //0
     private val chatIdAndSheetsId = mutableMapOf<Long, String>()
     private var isMapUpdated = false
-
+    init {
+        dailyTaskExecutor.startExecutionAt(18, 21, 59)
+    }
     override fun getBotToken(): String {
         if (token.isEmpty()) {
             token = ProjectProperties.mainProperties.getProperty("BOT_TOKEN")
@@ -208,6 +214,16 @@ object FairyOfEmotionsBot : TelegramLongPollingBot() {
         } catch (e: Exception) {
             System.err.println("Something wrong happened when trying to create a message")
             e.printStackTrace()
+        }
+    }
+
+    override fun onTimeForDailyTask() {
+        for (element in chatIdAndSheetsId) {
+            createMessage(element.key,
+                """
+                Это твоё ежедневное напоминание! 
+                Скорее пиши /add_rate и записывай, как ты себя чувствуешь <3 
+                """.trimIndent())
         }
     }
 }
