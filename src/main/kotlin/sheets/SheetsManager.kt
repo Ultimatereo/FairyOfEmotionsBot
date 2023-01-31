@@ -1,5 +1,7 @@
 package sheets
 
+import bot.DialogMode
+import bot.ResponseHandler
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
@@ -157,17 +159,18 @@ object SheetsManager {
     }
 
     fun updateMaps(
-        mapIds: MutableMap<Long, String>,
-        mapDaily: MutableMap<Long, DailyTaskExecutor>,
+        mapClient : MutableMap<Long, ResponseHandler.ClientData>,
         callback: ReminderTask.Callback
     ) {
         val request = sheetsService.spreadsheets().values().get(sheetsDataId, dataRange)
         val response = request.execute()
+        var sheetsId: String?
+        var dailyTaskExecutor: DailyTaskExecutor? = null
         val values = response.getValues() ?: return
         for (row in values) {
             val chatId = row[0].toString().toLong()
             val sheetsIdValue = row[1].toString()
-            mapIds[chatId] = sheetsIdValue
+            sheetsId = sheetsIdValue
             if (row.size == 4 && row[2].toString().isNotEmpty() && row[3].toString().isNotEmpty()) {
                 val dailyTask = DailyTaskExecutor(ReminderTask(callback))
                 dailyTask.startExecutionAt(
@@ -176,17 +179,26 @@ object SheetsManager {
                     0,
                     chatId
                 )
-                if (mapDaily.containsKey(chatId)) {
-                    mapDaily[chatId]!!.stop()
+                if (ResponseHandler.isDailyExecutorNotNull(chatId)) {
+                    mapClient[chatId]!!.dailyTaskExecutor!!.stop()
                 }
-                mapDaily[chatId] = dailyTask
-            } else if (mapDaily.containsKey(chatId)) {
-                mapDaily[chatId]!!.stop()
-                mapDaily.remove(chatId)
+                dailyTaskExecutor = dailyTask
+            } else if (ResponseHandler.isDailyExecutorNotNull(chatId)) {
+                mapClient[chatId]!!.dailyTaskExecutor!!.stop()
+            }
+            if (mapClient.containsKey(chatId)) {
+                mapClient[chatId]!!.sheetsId = sheetsId
+                mapClient[chatId]!!.dailyTaskExecutor = dailyTaskExecutor
+            } else {
+                mapClient[chatId] = ResponseHandler.ClientData(
+                    sheetsId,
+                    DialogMode.DEFAULT,
+                    0,
+                    null,
+                    dailyTaskExecutor
+                )
             }
         }
-        System.err.println(mapIds)
-        System.err.println(mapDaily)
     }
 
     fun setTime(chatId: String, sheetsId: String, hours: Int, minutes: Int) {

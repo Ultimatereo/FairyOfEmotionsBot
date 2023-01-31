@@ -4,45 +4,39 @@ import constants.FOEBotMessages
 import daily.DailyTaskExecutor
 import daily.ReminderTask
 import sheets.SheetsManager
-import java.io.IOException
 
 object ResponseHandler : ResponseHandlerInterface {
     private const val EMAIL_REGEX = "^[A-Za-z](.*)([@])(.+)(\\.)(.+)"
     private fun isEmailValid(email: String): Boolean {
         return EMAIL_REGEX.toRegex().matches(email)
     }
-
-    private val dialogMode = mutableMapOf<Long, DialogMode>() //DEFAULT
-    private val emotions = mutableMapOf<Long, List<String>>()
-    private val currentIndex = mutableMapOf<Long, Int>() //0
-    private val chatIdAndSheetsId = mutableMapOf<Long, String>()
-    private val dailyTaskExecutor = mutableMapOf<Long, DailyTaskExecutor>()
+    class ClientData(var sheetsId: String?,
+                     var dialogMode : DialogMode,
+                     var currentIndex: Int,
+                     var emotions: List<String>?,
+                     var dailyTaskExecutor: DailyTaskExecutor?)
+    private val mapClient = mutableMapOf<Long, ClientData>()
 
     init {
         try {
-            SheetsManager.updateMaps(chatIdAndSheetsId, dailyTaskExecutor, FOEBot)
+            SheetsManager.updateMaps(mapClient, FOEBot)
         } catch (e: Exception) {
             System.err.println("Updating chat ids and sheets ids failed!")
             e.printStackTrace()
-        }
-        for (element in chatIdAndSheetsId) {
-            dialogMode[element.key] = DialogMode.DEFAULT
-            currentIndex[element.key] = 0
         }
     }
 
     override fun helpCommand(chatId: Long) = createMessage(chatId, FOEBotMessages.HELP_MESSAGE)
 
     override fun startCommand(chatId: Long) {
-        if (chatIdAndSheetsId.containsKey(chatId)) {
+        if (mapClient.containsKey(chatId)) {
             createMessage(chatId, FOEBotMessages.createTablesMessage(getSheetsId(chatId)))
         } else {
             try {
                 val sheetsId = SheetsManager.createSpreadsheetFairy()
                 SheetsManager.addClient(sheetsId, chatId.toString())
-                chatIdAndSheetsId[chatId] = sheetsId
                 createMessage(chatId, FOEBotMessages.START_MESSAGE)
-                dialogMode[chatId] = DialogMode.EMAIL
+                mapClient[chatId] = ClientData(sheetsId, DialogMode.EMAIL, 0, mutableListOf(), null)
             } catch (e: Exception) {
                 createMessage(chatId, FOEBotMessages.SHEETS_CREATION_ERROR)
                 System.err.println("Something wrong happened when adding client to data base")
@@ -55,35 +49,37 @@ object ResponseHandler : ResponseHandlerInterface {
         createMessage(chatId, FOEBotMessages.createTablesMessage(getSheetsId(chatId)))
 
     override fun cancelCommand(chatId: Long) {
-        if (dialogMode[chatId] == DialogMode.EMAIL) {
+        if (mapClient[chatId]!!.dialogMode == DialogMode.EMAIL) {
             createMessage(chatId, FOEBotMessages.END_REG)
         } else {
             createMessage(chatId, FOEBotMessages.CANCELLATION_SUCCESS)
         }
-        dialogMode[chatId] = DialogMode.DEFAULT
+        mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
     }
 
     override fun addEmotionCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.WRITE_EMOTION)
-        dialogMode[chatId] = DialogMode.ADD_EMOTION
+        mapClient[chatId]!!.dialogMode = DialogMode.ADD_EMOTION
     }
 
     override fun addRateCommand(chatId: Long) {
-        if (dialogMode[chatId] == DialogMode.ADD_RATE) {
+        if (mapClient[chatId]!!.dialogMode == DialogMode.ADD_RATE) {
             createMessage(chatId, FOEBotMessages.RATE_IN_PROCCESS)
         } else {
             try {
-                emotions[chatId] = SheetsManager.getAllEmotions(getSheetsId(chatId))
+                mapClient[chatId]!!.emotions = SheetsManager.getAllEmotions(getSheetsId(chatId))
             } catch (e: Exception) {
                 System.err.println("Something wrong happened when getting all emotions")
                 e.printStackTrace()
             }
-            dialogMode[chatId] = DialogMode.ADD_RATE
-            currentIndex[chatId] = 0
+            mapClient[chatId]!!.dialogMode = DialogMode.ADD_RATE
+            mapClient[chatId]!!.currentIndex = 0
             createMessage(chatId, FOEBotMessages.RATE_EMOTIONS)
-            createMessage(chatId, FOEBotMessages.rateEmotion(emotions[chatId]!![currentIndex[chatId]!!]))
+            createMessage(chatId, FOEBotMessages.rateEmotion(getEmotion(chatId)))
         }
     }
+
+    private fun getEmotion(chatId: Long) = mapClient[chatId]!!.emotions!![mapClient[chatId]!!.currentIndex]
 
     override fun getEmotionsCommand(chatId: Long) {
         try {
@@ -96,19 +92,19 @@ object ResponseHandler : ResponseHandlerInterface {
 
     override fun linkEmailCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.LINK_EMAIL)
-        dialogMode[chatId] = DialogMode.EMAIL
+        mapClient[chatId]!!.dialogMode = DialogMode.EMAIL
     }
 
     override fun setTimeCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.SET_TIME)
-        dialogMode[chatId] = DialogMode.SET_TIME
+        mapClient[chatId]!!.dialogMode = DialogMode.SET_TIME
     }
 
     override fun cancelReminderCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.CANCEL_REMINDER)
-        if (dailyTaskExecutor.containsKey(chatId)) {
-            dailyTaskExecutor[chatId]!!.stop()
-            dailyTaskExecutor.remove(chatId)
+        if (isDailyExecutorNotNull(chatId)) {
+            mapClient[chatId]!!.dailyTaskExecutor!!.stop()
+            mapClient[chatId]!!.dailyTaskExecutor = null
         }
         try {
             SheetsManager.cancelReminder(chatId.toString(), getSheetsId(chatId))
@@ -118,8 +114,11 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
+    fun isDailyExecutorNotNull(chatId: Long) =
+        mapClient.containsKey(chatId) && mapClient[chatId]!!.dailyTaskExecutor != null
+
     override fun notCommand(chatId: Long, text: String) {
-        when (dialogMode[chatId]) {
+        when (mapClient[chatId]!!.dialogMode) {
             DialogMode.EMAIL -> {
                 if (isEmailValid(text)) {
                     try {
@@ -132,7 +131,7 @@ object ResponseHandler : ResponseHandlerInterface {
                     }
                     createMessage(chatId, FOEBotMessages.accessIsGivenTo(text))
                     createMessage(chatId, FOEBotMessages.createTablesMessage(getSheetsId(chatId)))
-                    dialogMode[chatId] = DialogMode.DEFAULT
+                    mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
                 } else {
                     createMessage(chatId, FOEBotMessages.EMAIL_WRONG)
                 }
@@ -151,7 +150,7 @@ object ResponseHandler : ResponseHandlerInterface {
                     createMessage(chatId, FOEBotMessages.EMOTION_ADD_FAIL)
                     return
                 }
-                dialogMode[chatId] = DialogMode.DEFAULT
+                mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
                 createMessage(chatId, FOEBotMessages.EMOTION_ADD_SUCCESS)
             }
             DialogMode.ADD_RATE -> {
@@ -159,13 +158,13 @@ object ResponseHandler : ResponseHandlerInterface {
                     val currentRate = text.toInt()
                     if ((10 >= currentRate) && (currentRate >= 1)) {
                         SheetsManager.addRate(
-                            emotions[chatId]!![currentIndex[chatId]!!],
+                            getEmotion(chatId),
                             currentRate,
                             getSheetsId(chatId)
                         )
-                        currentIndex[chatId] = currentIndex[chatId]!! + 1
-                        if (currentIndex[chatId] == emotions[chatId]!!.size) {
-                            dialogMode[chatId] = DialogMode.DEFAULT
+                        mapClient[chatId]!!.currentIndex++
+                        if (mapClient[chatId]!!.currentIndex == mapClient[chatId]!!.emotions!!.size) {
+                            mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
                             createMessage(chatId, FOEBotMessages.RATE_END)
                         }
                     } else {
@@ -174,7 +173,7 @@ object ResponseHandler : ResponseHandlerInterface {
                 } catch (e: Exception) {
                     createMessage(chatId, FOEBotMessages.RATE_RETRY_NOT_INT)
                 }
-                createMessage(chatId, FOEBotMessages.rateEmotion(emotions[chatId]!![currentIndex[chatId]!!]))
+                createMessage(chatId, FOEBotMessages.rateEmotion(getEmotion(chatId)))
             }
             DialogMode.SET_TIME -> {
                 try {
@@ -187,22 +186,22 @@ object ResponseHandler : ResponseHandlerInterface {
                         minutes,
                         0, chatId
                     )
-                    if (dailyTaskExecutor.containsKey(chatId)) {
-                        dailyTaskExecutor[chatId]!!.stop()
+                    if (isDailyExecutorNotNull(chatId)) {
+                        mapClient[chatId]!!.dailyTaskExecutor!!.stop()
                     }
-                    dailyTaskExecutor[chatId] = dailyTaskExecutorValue
+                    mapClient[chatId]!!.dailyTaskExecutor = dailyTaskExecutorValue
                     SheetsManager.setTime(chatId.toString(), getSheetsId(chatId), hours, minutes)
                     createMessage(chatId, FOEBotMessages.SET_TIME_SUCCESS)
                 } catch (e: Exception) {
                     createMessage(chatId, FOEBotMessages.SET_TIME_FAIL)
                 }
-                dialogMode[chatId] = DialogMode.DEFAULT
+                mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
             }
             else -> createMessage(chatId, FOEBotMessages.UNKNOWN_MESSAGE)
         }
     }
 
-    private fun getSheetsId(chatId: Long) = chatIdAndSheetsId[chatId]!!
+    private fun getSheetsId(chatId: Long) = mapClient[chatId]!!.sheetsId!!
 
     private fun createMessage(chatId: Long, text: String) {
         FOEBot.createMessage(chatId, text)
