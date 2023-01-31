@@ -92,11 +92,21 @@ object ResponseHandler : ResponseHandlerInterface {
         try {
             createMessage(chatId, FOEBotMessages.writeAllEmotions(getSheetsId(chatId)))
         } catch (e: Exception) {
+            createMessage(chatId, FOEBotMessages.GET_EMOTIONS_FAIL)
             System.err.println("Something went wrong when getting emotions")
             e.printStackTrace()
         }
     }
 
+    override fun getTimeCommand(chatId: Long) {
+        try {
+            createMessage(chatId, FOEBotMessages.writeTime(mapClient[chatId]!!.dailyTaskExecutor))
+        } catch (e: Exception) {
+            createMessage(chatId, FOEBotMessages.GET_TIME_FAIL)
+            System.err.println("Something went wrong when getting time")
+            e.printStackTrace()
+        }
+    }
     override fun linkEmailCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.LINK_EMAIL)
         mapClient[chatId]!!.dialogMode = DialogMode.EMAIL
@@ -187,12 +197,8 @@ object ResponseHandler : ResponseHandlerInterface {
                     val hoursAndMinutes = text.split(":")
                     val hours = hoursAndMinutes[0].toInt()
                     val minutes = hoursAndMinutes[1].toInt()
-                    val dailyTaskExecutorValue = DailyTaskExecutor(ReminderTask(FOEBot))
-                    dailyTaskExecutorValue.startExecutionAt(
-                        hours,
-                        minutes,
-                        0, chatId
-                    )
+                    val dailyTaskExecutorValue = DailyTaskExecutor(ReminderTask(FOEBot), hours, minutes)
+                    dailyTaskExecutorValue.startExecution(chatId)
                     if (isDailyExecutorNotNull(chatId)) {
                         mapClient[chatId]!!.dailyTaskExecutor!!.stop()
                     }

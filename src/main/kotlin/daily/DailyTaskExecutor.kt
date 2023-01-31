@@ -9,14 +9,12 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 
-class DailyTaskExecutor(dailyTask: DailyTask) {
+class DailyTaskExecutor(val dailyTask: DailyTask, val targetHour: Int, val targetMin: Int, val targetSec: Int = 0) {
     private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
-    private val dailyTask: DailyTask
-
-    fun startExecutionAt(targetHour: Int, targetMin: Int, targetSec: Int, chatId: Long) {
+    fun startExecution(chatId: Long) {
         val taskWrapper = Runnable {
             dailyTask.execute(chatId)
-            startExecutionAt(targetHour, targetMin, targetSec, chatId)
+            startExecution(chatId)
         }
         val delay = computeNextDelay(targetHour, targetMin, targetSec)
         executorService.schedule(taskWrapper, delay, TimeUnit.SECONDS)
@@ -34,9 +32,5 @@ class DailyTaskExecutor(dailyTask: DailyTask) {
 
     fun stop() {
         executorService.shutdownNow()
-    }
-
-    init {
-        this.dailyTask = dailyTask
     }
 }

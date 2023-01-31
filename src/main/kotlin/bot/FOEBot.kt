@@ -50,6 +50,7 @@ object FOEBot : FOEBotAbstract() {
             "/add_emotion" -> ResponseHandler.addEmotionCommand(chatId)
             "/add_rate" -> ResponseHandler.addRateCommand(chatId)
             "/get_emotions" -> ResponseHandler.getEmotionsCommand(chatId)
+            "/get_time" -> ResponseHandler.getTimeCommand(chatId)
             "/link_email" -> ResponseHandler.linkEmailCommand(chatId)
             "/set_time" -> ResponseHandler.setTimeCommand(chatId)
             "/cancel_reminder" -> ResponseHandler.cancelReminderCommand(chatId)

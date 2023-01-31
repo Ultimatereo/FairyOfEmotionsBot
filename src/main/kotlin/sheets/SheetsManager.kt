@@ -172,13 +172,9 @@ object SheetsManager {
             val sheetsIdValue = row[1].toString()
             sheetsId = sheetsIdValue
             if (row.size == 4 && row[2].toString().isNotEmpty() && row[3].toString().isNotEmpty()) {
-                val dailyTask = DailyTaskExecutor(ReminderTask(callback))
-                dailyTask.startExecutionAt(
-                    row[2].toString().toInt(),
-                    row[3].toString().toInt(),
-                    0,
-                    chatId
-                )
+                val dailyTask = DailyTaskExecutor(ReminderTask(callback),
+                    row[2].toString().toInt(), row[3].toString().toInt())
+                dailyTask.startExecution(chatId)
                 if (ResponseHandler.isDailyExecutorNotNull(chatId)) {
                     mapClient[chatId]!!.dailyTaskExecutor!!.stop()
                 }

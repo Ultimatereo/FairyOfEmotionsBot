@@ -1,9 +1,12 @@
 package constants
 
+import daily.DailyTaskExecutor
 import sheets.SheetsManager
 
 class FOEBotMessages {
     companion object {
+        const val GET_TIME_FAIL: String = "Не получилось вывести время напоминания"
+        const val GET_EMOTIONS_FAIL: String = "Не получилось вывести все эмоции"
         const val SHEETS_CREATION_ERROR: String = "Не получилось создать для вас таблицу :(\n" +
                 "Попробуйте ещё раз создать таблицу с помощью /start"
         const val DAILY_REMINDER: String = "Это твоё ежедневное напоминание!\n" +
@@ -49,6 +52,7 @@ class FOEBotMessages {
                     "/get_emotions - Выводит список всех трекуемых эмоций через запятую\n" +
                     "/link_email - Привязать почту к таблице\n" +
                     "/set_time - Установить или изменить время напоминания\n" +
+                    "/get_time - Узнать время напоминания\n" +
                     "/cancel_reminder - Отключить функцию напоминания"
         const val START_MESSAGE =
             "Приветики, для начала работы отправь, пожалуйста, свою почту на @gmail.com или привязанную почту к Google-аккаунту.\n" +
@@ -76,5 +80,12 @@ class FOEBotMessages {
                 Вот твоя таблица со всеми эмоциями и записями:
                 https://docs.google.com/spreadsheets/d/$sheetsId/edit#gid=0
             """.trimIndent()
+
+        fun writeTime(dailyTaskExecutor: DailyTaskExecutor?): String {
+            if (dailyTaskExecutor == null) {
+                return "Время напоминания не установлено!"
+            }
+            return "Установленное время напоминания: ${dailyTaskExecutor.targetHour}:${dailyTaskExecutor.targetMin}."
+        }
     }
 }

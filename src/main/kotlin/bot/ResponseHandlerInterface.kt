@@ -8,6 +8,7 @@ interface ResponseHandlerInterface {
     fun addEmotionCommand(chatId: Long)
     fun addRateCommand(chatId: Long)
     fun getEmotionsCommand(chatId: Long)
+    fun getTimeCommand(chatId: Long)
     fun linkEmailCommand(chatId: Long)
     fun setTimeCommand(chatId: Long)
     fun cancelReminderCommand(chatId: Long)
