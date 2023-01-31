@@ -24,8 +24,8 @@ class FOEBotMessages {
                     "Если вы введёте почту, никак не связанную с гуглом, то вы не получите доступ к таблице"
         private const val RATE_RETRY = "Введите оценку ещё раз. Оценка должна быть от 1 до 10!\n" +
                 "Если вы хотите отменить запись, то просто напишите /cancel"
-        const val RATE_RETRY_NOT_INT: String = "$RATE_RETRY Вы же ввели не число!"
-        const val RATE_RETRY_WRONG_RANGE: String = "$RATE_RETRY Вы же ввели число не от 1 до 10!"
+        const val RATE_RETRY_NOT_INT: String = "Вы ввели не число!\n $RATE_RETRY"
+        const val RATE_RETRY_WRONG_RANGE: String = "Вы ввели число не от 1 до 10!\n $RATE_RETRY"
         const val RATE_END = "Поздравляю, чекап завершён!"
         const val EMOTION_ADD_SUCCESS = "Всё успешно добавлено!"
         const val EMOTION_ADD_FAIL = "Что-то пошло не так. И не получилось добавить эмоцию :("

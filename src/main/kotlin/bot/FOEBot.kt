@@ -54,6 +54,7 @@ object FOEBot : FOEBotAbstract() {
             "/link_email" -> ResponseHandler.linkEmailCommand(chatId)
             "/set_time" -> ResponseHandler.setTimeCommand(chatId)
             "/cancel_reminder" -> ResponseHandler.cancelReminderCommand(chatId)
+            "/reset" -> return
             else -> ResponseHandler.notCommand(chatId, update.message.text)
         }
     }
