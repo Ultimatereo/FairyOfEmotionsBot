@@ -43,16 +43,16 @@ object FOEBot : FOEBotAbstract() {
         System.err.println(update.message.text)
 
         when (update.message.text) {
-            "/help" -> ResponseHandler.help(chatId)
-            "/start" -> ResponseHandler.start(chatId)
-            "/tables" -> ResponseHandler.tables(chatId)
-            "/cancel" -> ResponseHandler.cancel(chatId)
-            "/add_emotion" -> ResponseHandler.addEmotion(chatId)
-            "/add_rate" -> ResponseHandler.addRate(chatId)
-            "/get_emotions" -> ResponseHandler.getEmotions(chatId)
-            "/link_email" -> ResponseHandler.linkEmail(chatId)
-            "/set_time" -> ResponseHandler.setTime(chatId)
-            "/cancel_reminder" -> ResponseHandler.cancelReminder(chatId)
+            "/help" -> ResponseHandler.helpCommand(chatId)
+            "/start" -> ResponseHandler.startCommand(chatId)
+            "/tables" -> ResponseHandler.tablesCommand(chatId)
+            "/cancel" -> ResponseHandler.cancelCommand(chatId)
+            "/add_emotion" -> ResponseHandler.addEmotionCommand(chatId)
+            "/add_rate" -> ResponseHandler.addRateCommand(chatId)
+            "/get_emotions" -> ResponseHandler.getEmotionsCommand(chatId)
+            "/link_email" -> ResponseHandler.linkEmailCommand(chatId)
+            "/set_time" -> ResponseHandler.setTimeCommand(chatId)
+            "/cancel_reminder" -> ResponseHandler.cancelReminderCommand(chatId)
             else -> ResponseHandler.notCommand(chatId, update.message.text)
         }
     }

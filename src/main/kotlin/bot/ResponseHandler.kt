@@ -30,9 +30,9 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    override fun help(chatId: Long) = createMessage(chatId, FOEBotMessages.HELP_MESSAGE)
+    override fun helpCommand(chatId: Long) = createMessage(chatId, FOEBotMessages.HELP_MESSAGE)
 
-    override fun start(chatId: Long) {
+    override fun startCommand(chatId: Long) {
         if (chatIdAndSheetsId.containsKey(chatId)) {
             createMessage(chatId, FOEBotMessages.createTablesMessage(getSheetsId(chatId)))
         } else {
@@ -49,9 +49,10 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    override fun tables(chatId: Long) = createMessage(chatId, FOEBotMessages.createTablesMessage(getSheetsId(chatId)))
+    override fun tablesCommand(chatId: Long) =
+        createMessage(chatId, FOEBotMessages.createTablesMessage(getSheetsId(chatId)))
 
-    override fun cancel(chatId: Long) {
+    override fun cancelCommand(chatId: Long) {
         if (dialogMode[chatId] == DialogMode.EMAIL) {
             createMessage(chatId, FOEBotMessages.END_REG)
         } else {
@@ -60,12 +61,12 @@ object ResponseHandler : ResponseHandlerInterface {
         dialogMode[chatId] = DialogMode.DEFAULT
     }
 
-    override fun addEmotion(chatId: Long) {
+    override fun addEmotionCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.WRITE_EMOTION)
         dialogMode[chatId] = DialogMode.ADD_EMOTION
     }
 
-    override fun addRate(chatId: Long) {
+    override fun addRateCommand(chatId: Long) {
         if (dialogMode[chatId] == DialogMode.ADD_RATE) {
             createMessage(chatId, FOEBotMessages.RATE_IN_PROCCESS)
         } else {
@@ -82,7 +83,7 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    override fun getEmotions(chatId: Long) {
+    override fun getEmotionsCommand(chatId: Long) {
         try {
             createMessage(chatId, FOEBotMessages.writeAllEmotions(getSheetsId(chatId)))
         } catch (e: Exception) {
@@ -91,17 +92,17 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    override fun linkEmail(chatId: Long) {
+    override fun linkEmailCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.LINK_EMAIL)
         dialogMode[chatId] = DialogMode.EMAIL
     }
 
-    override fun setTime(chatId: Long) {
+    override fun setTimeCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.SET_TIME)
         dialogMode[chatId] = DialogMode.SET_TIME
     }
 
-    override fun cancelReminder(chatId: Long) {
+    override fun cancelReminderCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.CANCEL_REMINDER)
         if (dailyTaskExecutor.containsKey(chatId)) {
             dailyTaskExecutor[chatId]!!.stop()
