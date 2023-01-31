@@ -4,6 +4,8 @@ import sheets.SheetsManager
 
 class FOEBotMessages {
     companion object {
+        const val SHEETS_CREATION_ERROR: String = "Не получилось создать для вас таблицу :(\n" +
+                "Попробуйте ещё раз создать таблицу с помощью /start"
         const val DAILY_REMINDER: String = "Это твоё ежедневное напоминание!\n" +
                 "Скорее пиши /add_rate и записывай, как ты себя чувствуешь <3"
         const val SET_TIME_FAIL: String = "Данные были введены неверно. Попробуйте ещё раз."

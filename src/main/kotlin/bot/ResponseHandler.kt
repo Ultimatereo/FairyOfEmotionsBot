@@ -4,6 +4,7 @@ import constants.FOEBotMessages
 import daily.DailyTaskExecutor
 import daily.ReminderTask
 import sheets.SheetsManager
+import java.io.IOException
 
 object ResponseHandler : ResponseHandlerInterface {
     private const val EMAIL_REGEX = "^[A-Za-z](.*)([@])(.+)(\\.)(.+)"
@@ -36,16 +37,17 @@ object ResponseHandler : ResponseHandlerInterface {
         if (chatIdAndSheetsId.containsKey(chatId)) {
             createMessage(chatId, FOEBotMessages.createTablesMessage(getSheetsId(chatId)))
         } else {
-            val sheetsId = SheetsManager.createSpreadsheetFairy()
             try {
+                val sheetsId = SheetsManager.createSpreadsheetFairy()
                 SheetsManager.addClient(sheetsId, chatId.toString())
+                chatIdAndSheetsId[chatId] = sheetsId
+                createMessage(chatId, FOEBotMessages.START_MESSAGE)
+                dialogMode[chatId] = DialogMode.EMAIL
             } catch (e: Exception) {
+                createMessage(chatId, FOEBotMessages.SHEETS_CREATION_ERROR)
                 System.err.println("Something wrong happened when adding client to data base")
                 e.printStackTrace()
             }
-            chatIdAndSheetsId[chatId] = sheetsId
-            createMessage(chatId, FOEBotMessages.START_MESSAGE)
-            dialogMode[chatId] = DialogMode.EMAIL
         }
     }
 
