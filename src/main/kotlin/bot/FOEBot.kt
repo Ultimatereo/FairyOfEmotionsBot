@@ -1,11 +1,15 @@
 package bot
 
+import constants.Strings
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import properties.ProjectProperties
 
 
 object FOEBot : CustomBotInterface() {
+    init {
+        ResponseHandler
+    }
     private var token = ""
     override fun getBotToken(): String {
         if (token.isEmpty()) {
@@ -63,12 +67,6 @@ object FOEBot : CustomBotInterface() {
     }
 
     override fun onTimeForDailyTask(chatId: Long) {
-        createMessage(
-            chatId,
-            """
-            Это твоё ежедневное напоминание! 
-            Скорее пиши /add_rate и записывай, как ты себя чувствуешь <3 
-            """.trimIndent()
-        )
+        createMessage(chatId, Strings.DAILY_REMINDER)
     }
 }

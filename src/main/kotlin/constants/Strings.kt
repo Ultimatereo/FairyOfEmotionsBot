@@ -4,6 +4,11 @@ import sheets.SheetsManager
 
 interface Strings {
     companion object {
+        val DAILY_REMINDER: String =
+            """
+                Это твоё ежедневное напоминание! 
+                Скорее пиши /add_rate и записывай, как ты себя чувствуешь <3
+            """.trimIndent()
         val SET_TIME_FAIL: String = "Данные были введены неверно. Попробуйте ещё раз."
         val SET_TIME_SUCCESS: String = "Напоминалка успешно поставлена!"
         val CANCEL_REMINDER_FAIL: String =
