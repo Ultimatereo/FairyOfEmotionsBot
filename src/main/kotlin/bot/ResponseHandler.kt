@@ -14,14 +14,19 @@ object ResponseHandler : ResponseHandlerInterface {
                 "|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])" +
                 "|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\" +
                 "[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)])").toRegex()
+
     private fun isEmailValid(email: String): Boolean {
         return EMAIL_REGEX.matches(email)
     }
-    class ClientData(var sheetsId: String?,
-                     var dialogMode : DialogMode,
-                     var currentIndex: Int,
-                     var emotions: List<String>?,
-                     var dailyTaskExecutor: DailyTaskExecutor?)
+
+    class ClientData(
+        var sheetsId: String?,
+        var dialogMode: DialogMode,
+        var currentIndex: Int,
+        var emotions: List<String>?,
+        var dailyTaskExecutor: DailyTaskExecutor?
+    )
+
     private val mapClient = mutableMapOf<Long, ClientData>()
 
     init {
@@ -33,9 +38,13 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    override fun helpCommand(chatId: Long) = createMessage(chatId, FOEBotMessages.HELP_MESSAGE)
+    override fun helpCommand(chatId: Long) {
+        mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
+        createMessage(chatId, FOEBotMessages.HELP_MESSAGE)
+    }
 
     override fun startCommand(chatId: Long) {
+        mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
         if (mapClient.containsKey(chatId)) {
             createMessage(chatId, FOEBotMessages.createTablesMessage(getSheetsId(chatId)))
         } else {
@@ -52,8 +61,10 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    override fun tablesCommand(chatId: Long) =
+    override fun tablesCommand(chatId: Long) {
+        mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
         createMessage(chatId, FOEBotMessages.createTablesMessage(getSheetsId(chatId)))
+    }
 
     override fun cancelCommand(chatId: Long) {
         if (mapClient[chatId]!!.dialogMode == DialogMode.EMAIL) {
@@ -86,9 +97,11 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    private fun getEmotion(chatId: Long) = mapClient[chatId]!!.emotions!![mapClient[chatId]!!.currentIndex]
+    private fun getEmotion(chatId: Long) =
+        mapClient[chatId]!!.emotions!![mapClient[chatId]!!.currentIndex]
 
     override fun getEmotionsCommand(chatId: Long) {
+        mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
         try {
             createMessage(chatId, FOEBotMessages.writeAllEmotions(getSheetsId(chatId)))
         } catch (e: Exception) {
@@ -99,6 +112,7 @@ object ResponseHandler : ResponseHandlerInterface {
     }
 
     override fun getTimeCommand(chatId: Long) {
+        mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
         try {
             createMessage(chatId, FOEBotMessages.writeTime(mapClient[chatId]!!.dailyTaskExecutor))
         } catch (e: Exception) {
@@ -107,6 +121,7 @@ object ResponseHandler : ResponseHandlerInterface {
             e.printStackTrace()
         }
     }
+
     override fun linkEmailCommand(chatId: Long) {
         createMessage(chatId, FOEBotMessages.LINK_EMAIL)
         mapClient[chatId]!!.dialogMode = DialogMode.EMAIL
@@ -118,6 +133,7 @@ object ResponseHandler : ResponseHandlerInterface {
     }
 
     override fun cancelReminderCommand(chatId: Long) {
+        mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
         createMessage(chatId, FOEBotMessages.CANCEL_REMINDER)
         if (isDailyExecutorNotNull(chatId)) {
             mapClient[chatId]!!.dailyTaskExecutor!!.stop()
