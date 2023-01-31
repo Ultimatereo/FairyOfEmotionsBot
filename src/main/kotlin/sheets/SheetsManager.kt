@@ -6,6 +6,7 @@ import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.http.HttpTransport
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.JsonFactory
 import com.google.api.client.json.gson.GsonFactory
@@ -33,11 +34,12 @@ object SheetsManager {
     private const val TOKENS_DIRECTORY_PATH = "tokens"
     private val SCOPES = SheetsScopes.all()
     private const val CREDENTIALS_FILE_PATH = "/credentials.json"
+    private const val port = 8888
 
     private val sheetsSampleId = ProjectProperties.sheetsProperties.getProperty("SHEETS_SAMPLE_ID")
     private val sheetsDataId = ProjectProperties.sheetsProperties.getProperty("SHEETS_DATA_ID")
     private val HTTP_TRANSPORT: NetHttpTransport = GoogleNetHttpTransport.newTrustedTransport()
-    private val credentials: Credential = getCredentials(HTTP_TRANSPORT)
+    private val credentials: Credential = getCredentials()
     private val sheetsService: Sheets = Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
         .setApplicationName(APPLICATION_NAME)
         .build()
@@ -51,8 +53,8 @@ object SheetsManager {
      * @return An authorized Credential object.
      * @throws IOException If the credentials.json file cannot be found.
      */
-    @Throws(IOException::class)
-    private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
+
+    private fun getCredentials(HTTP_TRANSPORT: HttpTransport = SheetsManager.HTTP_TRANSPORT): Credential {
         // Load client secrets.
         val `in` = SheetsManager::class.java.getResourceAsStream(CREDENTIALS_FILE_PATH)
             ?: throw FileNotFoundException("Resource not found: $CREDENTIALS_FILE_PATH")
@@ -65,7 +67,7 @@ object SheetsManager {
             .setDataStoreFactory(FileDataStoreFactory(File(TOKENS_DIRECTORY_PATH)))
             .setAccessType("offline")
             .build()
-        val receiver: LocalServerReceiver = LocalServerReceiver.Builder().setPort(8888).build()
+        val receiver: LocalServerReceiver = LocalServerReceiver.Builder().setPort(port).build()
         return AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
     }
 
@@ -103,10 +105,6 @@ object SheetsManager {
         return newSheetsId
     }
 
-    fun addEmotion(emotion: String, sheetsId: String) {
-        addEmotions(listOf(emotion), sheetsId)
-    }
-
     fun addEmotions(emotions: List<String>, sheetsId: String) {
         insertColumn(emotions, emotionRange, sheetsId)
     }
@@ -118,11 +116,11 @@ object SheetsManager {
         )
     }
 
-    private fun insert(list: List<String>, range: String, majorDimension: String, sheetsId: String) {
+    private fun insert(list: List<Any>, range: String, majorDimension: String, sheetsId: String) {
         val requestBody = ValueRange()
         requestBody.majorDimension = majorDimension
         requestBody.range = range
-        requestBody.setValues(mutableListOf(list) as List<List<Any>>)
+        requestBody.setValues(mutableListOf(list))
         val request: Sheets.Spreadsheets.Values.Append =
             sheetsService.spreadsheets().values().append(sheetsId, range, requestBody)
         request.valueInputOption = valueInputOption

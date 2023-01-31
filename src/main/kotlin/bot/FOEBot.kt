@@ -1,15 +1,18 @@
 package bot
 
-import constants.Strings
+import constants.FOEBotMessages
+import daily.ReminderTask
+import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import properties.ProjectProperties
 
-
-object FOEBot : CustomBotInterface() {
+abstract class FOEBotAbstract : TelegramLongPollingBot(), ReminderTask.Callback
+object FOEBot : FOEBotAbstract() {
     init {
         ResponseHandler
     }
+
     private var token = ""
     override fun getBotToken(): String {
         if (token.isEmpty()) {
@@ -67,6 +70,6 @@ object FOEBot : CustomBotInterface() {
     }
 
     override fun onTimeForDailyTask(chatId: Long) {
-        createMessage(chatId, Strings.DAILY_REMINDER)
+        createMessage(chatId, FOEBotMessages.DAILY_REMINDER)
     }
 }
