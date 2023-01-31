@@ -4,19 +4,12 @@ import constants.Strings
 import daily.DailyTaskExecutor
 import daily.ReminderTask
 import sheets.SheetsManager
-
 object ResponseHandler : ResponseHandlerInterface {
-    class EmailValidator {
-        companion object {
-            @JvmStatic
-            val EMAIL_REGEX = "^[A-Za-z](.*)([@])(.+)(\\.)(.+)"
-            fun isEmailValid(email: String): Boolean {
-                return EMAIL_REGEX.toRegex().matches(email)
-            }
-        }
+    private const val EMAIL_REGEX = "^[A-Za-z](.*)([@])(.+)(\\.)(.+)"
+    private fun isEmailValid(email: String): Boolean {
+        return EMAIL_REGEX.toRegex().matches(email)
     }
-
-    private val dialogMode = mutableMapOf<Long, Int>() //0
+    private val dialogMode = mutableMapOf<Long, DialogMode>() //DEFAULT
     private val emotions = mutableMapOf<Long, List<String>>()
     private val currentIndex = mutableMapOf<Long, Int>() //0
     private val chatIdAndSheetsId = mutableMapOf<Long, String>()
@@ -30,7 +23,7 @@ object ResponseHandler : ResponseHandlerInterface {
             e.printStackTrace()
         }
         for (element in chatIdAndSheetsId) {
-            dialogMode[element.key] = 0
+            dialogMode[element.key] = DialogMode.DEFAULT
             currentIndex[element.key] = 0
         }
     }
@@ -50,28 +43,28 @@ object ResponseHandler : ResponseHandlerInterface {
             }
             chatIdAndSheetsId[chatId] = sheetsId
             createMessage(chatId, Strings.START_MESSAGE)
-            dialogMode[chatId] = 1
+            dialogMode[chatId] = DialogMode.EMAIL
         }
     }
 
     override fun tables(chatId: Long) = createMessage(chatId, Strings.createTablesMessage(getSheetsId(chatId)))
 
     override fun cancel(chatId: Long) {
-        if (dialogMode[chatId] == 1) {
+        if (dialogMode[chatId] == DialogMode.EMAIL) {
             createMessage(chatId, Strings.END_REG)
         } else {
             createMessage(chatId, Strings.CANCELLATION_SUCCESS)
         }
-        dialogMode[chatId] = 0
+        dialogMode[chatId] = DialogMode.DEFAULT
     }
 
     override fun addEmotion(chatId: Long) {
         createMessage(chatId, Strings.WRITE_EMOTION)
-        dialogMode[chatId] = 2
+        dialogMode[chatId] = DialogMode.ADD_EMOTION
     }
 
     override fun addRate(chatId: Long) {
-        if (dialogMode[chatId] == 3) {
+        if (dialogMode[chatId] == DialogMode.ADD_RATE) {
             createMessage(chatId, Strings.RATE_IN_PROCCESS)
         } else {
             try {
@@ -80,7 +73,7 @@ object ResponseHandler : ResponseHandlerInterface {
                 System.err.println("Something wrong happened when getting all emotions")
                 e.printStackTrace()
             }
-            dialogMode[chatId] = 3
+            dialogMode[chatId] = DialogMode.ADD_RATE
             currentIndex[chatId] = 0
             createMessage(chatId, Strings.RATE_EMOTIONS)
             createMessage(chatId, Strings.rateEmotion(emotions[chatId]!![currentIndex[chatId]!!]))
@@ -98,12 +91,12 @@ object ResponseHandler : ResponseHandlerInterface {
 
     override fun linkEmail(chatId: Long) {
         createMessage(chatId, Strings.LINK_EMAIL)
-        dialogMode[chatId] = 1
+        dialogMode[chatId] = DialogMode.EMAIL
     }
 
     override fun setTime(chatId: Long) {
         createMessage(chatId, Strings.SET_TIME)
-        dialogMode[chatId] = 4
+        dialogMode[chatId] = DialogMode.SET_TIME
     }
 
     override fun cancelReminder(chatId: Long) {
@@ -122,8 +115,8 @@ object ResponseHandler : ResponseHandlerInterface {
 
     override fun notCommand(chatId: Long, text: String) {
         when (dialogMode[chatId]) {
-            1 -> {
-                if (EmailValidator.isEmailValid(text)) {
+            DialogMode.EMAIL -> {
+                if (isEmailValid(text)) {
                     try {
                         SheetsManager.givePermissionToSpreadsheet(
                             getSheetsId(chatId), text
@@ -133,12 +126,12 @@ object ResponseHandler : ResponseHandlerInterface {
                     }
                     createMessage(chatId, Strings.accessIsGivenTo(text))
                     createMessage(chatId, Strings.createTablesMessage(getSheetsId(chatId)))
-                    dialogMode[chatId] = 0
+                    dialogMode[chatId] = DialogMode.DEFAULT
                 } else {
                     createMessage(chatId, Strings.EMAIL_WRONG)
                 }
             }
-            2 -> {
+            DialogMode.ADD_EMOTION -> {
                 val emotionsForPrinting: List<String> =
                     text.filterNot { it.isWhitespace() }.split(",")
                 try {
@@ -150,10 +143,10 @@ object ResponseHandler : ResponseHandlerInterface {
                     )
                     e.printStackTrace()
                 }
-                dialogMode[chatId] = 0
+                dialogMode[chatId] = DialogMode.DEFAULT
                 createMessage(chatId, Strings.EMOTION_ADD_SUCCESS)
             }
-            3 -> {
+            DialogMode.ADD_RATE -> {
                 var isCorrect = false
                 var currentRate = 0
                 try {
@@ -172,7 +165,7 @@ object ResponseHandler : ResponseHandlerInterface {
                     )
                     currentIndex[chatId] = currentIndex[chatId]!! + 1
                     if (currentIndex[chatId] == emotions[chatId]!!.size) {
-                        dialogMode[chatId] = 0
+                        dialogMode[chatId] = DialogMode.DEFAULT
                         createMessage(chatId, Strings.RATE_END)
                     }
                 } else {
@@ -180,7 +173,7 @@ object ResponseHandler : ResponseHandlerInterface {
                 }
                 createMessage(chatId, Strings.rateEmotion(emotions[chatId]!![currentIndex[chatId]!!]))
             }
-            4 -> {
+            DialogMode.SET_TIME -> {
                 try {
                     val hoursAndMinutes = text.split(":")
                     val hours = hoursAndMinutes[0].toInt()
@@ -200,7 +193,7 @@ object ResponseHandler : ResponseHandlerInterface {
                 } catch (e: Exception) {
                     createMessage(chatId, Strings.SET_TIME_FAIL)
                 }
-                dialogMode[chatId] = 0
+                dialogMode[chatId] = DialogMode.DEFAULT
             }
             else -> createMessage(chatId, Strings.UNKNOWN_MESSAGE)
         }
