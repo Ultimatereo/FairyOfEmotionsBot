@@ -12,6 +12,8 @@ object FOEBot : FOEBotAbstract() {
     init {
         ResponseHandler
     }
+//    TODO("СДЕЛАЙ АДЕКВАТНЫЕ ЛОГИ")
+//    TODO("СДЕЛАЙН НЕСКОЛЬКО НАПОМИНАЛОК")
 
     private var token = ""
     override fun getBotToken(): String {
@@ -54,24 +56,13 @@ object FOEBot : FOEBotAbstract() {
             "/link_email" -> ResponseHandler.linkEmailCommand(chatId)
             "/set_time" -> ResponseHandler.setTimeCommand(chatId)
             "/cancel_reminder" -> ResponseHandler.cancelReminderCommand(chatId)
-            "/reset" -> return
+            "/reset" -> ResponseHandler.resetCommand(chatId)
+            "/support" -> ResponseHandler.supportCommand(chatId)
             else -> ResponseHandler.notCommand(chatId, update.message.text)
         }
     }
 
-    fun createMessage(chatId: Long, text: String) {
-        try {
-            val sendMessage = SendMessage()
-            sendMessage.chatId = chatId.toString()
-            sendMessage.text = text
-            execute(sendMessage)
-        } catch (e: Exception) {
-            System.err.println("Something wrong happened when trying to create a message")
-            e.printStackTrace()
-        }
-    }
-
     override fun onTimeForDailyTask(chatId: Long) {
-        createMessage(chatId, FOEBotMessages.DAILY_REMINDER)
+        ResponseHandler.createMessage(chatId, FOEBotMessages.DAILY_REMINDER)
     }
 }

@@ -13,4 +13,6 @@ interface ResponseHandlerInterface {
     fun setTimeCommand(chatId: Long)
     fun cancelReminderCommand(chatId: Long)
     fun notCommand(chatId: Long, text: String)
+    fun resetCommand(chatId: Long)
+    fun supportCommand(chatId: Long)
 }

@@ -5,8 +5,31 @@ import sheets.SheetsManager
 
 class FOEBotMessages {
     companion object {
-        const val GET_TIME_FAIL: String = "Не получилось вывести время напоминания"
-        const val GET_EMOTIONS_FAIL: String = "Не получилось вывести все эмоции"
+        const val RESET_STOP: String = "Отлично! Старая таблица удалена! Приступаю к созданию новой..."
+        const val RESET_START: String = "Начинаем ресет..."
+        private const val WRITE_TO_SUPPORT =
+            "Если же ничего не помогает, то напиши /support, чтобы обратиться в поддержку."
+        const val SUPPORT = "По всем вопросам, связанным с ботом, можно обратиться ко мне в лс: @Ultimatereo"
+        const val RESET_ERROR = "Не получилось сделать ресет, к сожалению\n$WRITE_TO_SUPPORT"
+        const val NOT_COMMAND_ERROR: String = "Что-то пошло не так при обработке обычного текста.\n" +
+                "Убедись, что ты написал всё, как надо\n" +
+                WRITE_TO_SUPPORT
+        const val CANCEL_REMINDER_ERROR: String = "Не получилось отключить напоминалку.\n$WRITE_TO_SUPPORT"
+        const val SET_TIME_ERROR: String = "Не получилось поставить или изменить время напоминания.\n$WRITE_TO_SUPPORT"
+        const val LINK_EMAIL_ERROR: String = "Не получилось привязать почту к таблице.\n$WRITE_TO_SUPPORT"
+        const val GET_TIME_ERROR: String = "Не получилось вывести время напоминания.\n$WRITE_TO_SUPPORT"
+        const val RATE_ERROR: String = "Не получилось добавить запись.\n$WRITE_TO_SUPPORT"
+        const val EMOTION_ADD_ERROR: String = "Не получилось добавить эмоцию.\n$WRITE_TO_SUPPORT"
+        const val CANCELLATION_ERROR: String = "Не получилось отменить операцию.\n$WRITE_TO_SUPPORT"
+        const val TABLES_ERROR: String = "У меня не получилось вывести ссылку на таблицу\n" +
+                "Убедитесь, что таблица создана\n" +
+                WRITE_TO_SUPPORT
+        const val HELP_MESSAGE_ERROR: String = "У меня не получилось вывести все команды :(\n$WRITE_TO_SUPPORT"
+        const val CREATE_MESSAGE_ERROR: String =
+            "Что-то пошло не так и, у меня не получилось тебе отправить сообщение :(\n" +
+                    "Убедись, что всё в твоей таблице корректно\n" +
+                    WRITE_TO_SUPPORT
+        const val GET_EMOTIONS_ERROR: String = "Не получилось вывести все эмоции"
         const val SHEETS_CREATION_ERROR: String = "Не получилось создать для вас таблицу :(\n" +
                 "Попробуйте ещё раз создать таблицу с помощью /start"
         const val DAILY_REMINDER: String = "Это твоё ежедневное напоминание!\n" +
@@ -47,15 +70,17 @@ class FOEBotMessages {
                     "/help - Вывод всех доступных команд\n" +
                     "/start - Начало работы с ботом. Создание таблицы\n" +
                     "/tables - Вывод таблицы\n" +
+                    "/cancel - Отмена последней операции\n" +
                     "/add_emotion - Добавить эмоцию в список трекаемых эмоций\n" +
                     "/add_rate - Добавить запись, оценку эмоций\n" +
                     "/get_emotions - Выводит список всех трекуемых эмоций через запятую\n" +
                     "/link_email - Привязать почту к таблице\n" +
                     "/set_time - Установить или изменить время напоминания\n" +
                     "/get_time - Узнать время напоминания\n" +
+                    "/support - Поддержка и помощь по вопросам, связанных с ботом\n" +
                     "/cancel_reminder - Отключить функцию напоминания"
         const val START_MESSAGE =
-            "Приветики, для начала работы отправь, пожалуйста, свою почту на @gmail.com или привязанную почту к Google-аккаунту.\n" +
+            "Отправь, пожалуйста, свою почту на @gmail.com или привязанную почту к Google-аккаунту.\n" +
                     "Пожалуйста, указывайте реальную почту, иначе вы не получите доступа к таблице с данными\n" +
                     "Например vasya@gmail.com\n" +
                     "Если ты хочешь отменить создание таблицы, то просто напиши /cancel"
