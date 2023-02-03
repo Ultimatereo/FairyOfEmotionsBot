@@ -5,6 +5,10 @@ import sheets.SheetsManager
 
 class FOEBotMessages {
     companion object {
+        const val REMOVE_TIME_ERROR: String = "Не удалось удалить напоминалки :("
+        const val REMOVE_TIME_FAIL: String =
+            "Не получилось удалить напоминания. Возможно, что вы некорректно ввели данные!"
+        const val REMOVE_TIME_EMPTY: String = "У вас не стоит напоминаний, поэтому и удалять вам нечего :)"
         const val RESET_STOP: String = "Отлично! Старая таблица удалена! Приступаю к созданию новой..."
         const val RESET_START: String = "Начинаем ресет..."
         private const val WRITE_TO_SUPPORT =
@@ -14,8 +18,8 @@ class FOEBotMessages {
         const val NOT_COMMAND_ERROR: String = "Что-то пошло не так при обработке обычного текста.\n" +
                 "Убедись, что ты написал всё, как надо\n" +
                 WRITE_TO_SUPPORT
-        const val CANCEL_REMINDER_ERROR: String = "Не получилось отключить напоминалку.\n$WRITE_TO_SUPPORT"
-        const val SET_TIME_ERROR: String = "Не получилось поставить или изменить время напоминания.\n$WRITE_TO_SUPPORT"
+        const val CANCEL_REMINDER_ERROR: String = "Не получилось отключить напоминалки.\n$WRITE_TO_SUPPORT"
+        const val ADD_TIME_ERROR: String = "Не получилось поставить или изменить время напоминания.\n$WRITE_TO_SUPPORT"
         const val LINK_EMAIL_ERROR: String = "Не получилось привязать почту к таблице.\n$WRITE_TO_SUPPORT"
         const val GET_TIME_ERROR: String = "Не получилось вывести время напоминания.\n$WRITE_TO_SUPPORT"
         const val RATE_ERROR: String = "Не получилось добавить запись.\n$WRITE_TO_SUPPORT"
@@ -35,13 +39,11 @@ class FOEBotMessages {
         const val DAILY_REMINDER: String = "Это твоё ежедневное напоминание!\n" +
                 "Скорее пиши /add_rate и записывай, как ты себя чувствуешь <3"
         const val SET_TIME_FAIL: String = "Данные были введены неверно. Попробуйте ещё раз."
-        const val SET_TIME_SUCCESS: String = "Напоминалка успешно поставлена!"
-        const val CANCEL_REMINDER_FAIL: String = "Не получилось отключить напоминалку("
-        const val CANCEL_REMINDER_SUCCESS: String = "Напоминалка успешно отключена"
-        const val CANCEL_REMINDER: String = "Отменяю напоминалку..."
-        const val SET_TIME: String =
+        const val CANCEL_REMINDER_SUCCESS: String = "Напоминалки успешно удалены"
+        const val ADD_TIME: String =
             "Введи, пожалуйста, время по МСК в формате HH:mm\n" +
-                    "Например, 10:00"
+                    "Если вы хотите несколько напоминаний, то введите их через запятую\n" +
+                    "Например, 10:00, 19:00"
         const val LINK_EMAIL: String =
             "Введите, пожалуйста, почту gmail или любую другую, привязанную к гуглу.\n" +
                     "Если вы введёте почту, никак не связанную с гуглом, то вы не получите доступ к таблице"
@@ -58,10 +60,6 @@ class FOEBotMessages {
         const val RATE_IN_PROCCESS = "Запись оценки по эмоциям в процессе! " +
                 "Ответьте, пожалуйста, на последний вопрос!"
         const val CANCELLATION_SUCCESS = "Команда успешно отменена!"
-        const val END_REG =
-            "Привязка почты прервана успешно.\n" +
-                    "Если к таблице не будет привязана ваша почта, то вы не получите доступ к ней.\n" +
-                    "Вы можете привязать почту через команду /link_email"
         const val RATE_EMOTIONS: String = "Начнём же оценку каждой из эмоций, дорогой друг."
         const val WRITE_EMOTION =
             "Введите через запятую все эмоции, за которыми вы хотите следить. \nДля отмены операции введите /cancel."
@@ -75,10 +73,11 @@ class FOEBotMessages {
                     "/add_rate - Добавить запись, оценку эмоций\n" +
                     "/get_emotions - Выводит список всех трекуемых эмоций через запятую\n" +
                     "/link_email - Привязать почту к таблице\n" +
-                    "/set_time - Установить или изменить время напоминания\n" +
+                    "/add_time - Добавить ещё напоминалок\n" +
+                    "/remove_time - Удалить некоторые напоминалки\n" +
+                    "/cancel_reminder - Удалить все напоминалки\n" +
                     "/get_time - Узнать время напоминания\n" +
-                    "/support - Поддержка и помощь по вопросам, связанных с ботом\n" +
-                    "/cancel_reminder - Отключить функцию напоминания"
+                    "/support - Поддержка и помощь по вопросам, связанных с ботом"
         const val START_MESSAGE =
             "Отправь, пожалуйста, свою почту на @gmail.com или привязанную почту к Google-аккаунту.\n" +
                     "Пожалуйста, указывайте реальную почту, иначе вы не получите доступа к таблице с данными\n" +
@@ -106,11 +105,34 @@ class FOEBotMessages {
                 https://docs.google.com/spreadsheets/d/$sheetsId/edit#gid=0
             """.trimIndent()
 
-        fun writeTime(dailyTaskExecutor: DailyTaskExecutor?): String {
-            if (dailyTaskExecutor == null) {
+        fun writeTime(dailyTaskExecutors: MutableList<DailyTaskExecutor>): String {
+            if (dailyTaskExecutors.isEmpty()) {
                 return "Время напоминания не установлено!"
             }
-            return "Установленное время напоминания: ${dailyTaskExecutor.targetHour}:${dailyTaskExecutor.targetMin}."
+            var answer = "Установленные времена напоминания:"
+            for (i in 1..dailyTaskExecutors.size) {
+                val element = dailyTaskExecutors[i - 1]
+                answer = "$answer\n$i. ${element.targetHour}:${element.targetMin}"
+            }
+            return answer
         }
+
+        fun setTimeSuccess(hours: Int, minutes: Int): String =
+            "Напоминалка $hours:$minutes успешно поставлена!"
+
+        fun removeTime(dailyTaskExecutors: MutableList<DailyTaskExecutor>): String {
+            val text = "Выведите через запятую номера напоминалок, которые вы хотите удалить.\n" +
+                    "Например, '1, 3' удалит первую и третью напоминалку\n"
+            return "$text\n${writeTime(dailyTaskExecutors)}"
+
+        }
+
+        fun setTimeAlreadyExists(hours: Int, minutes: Int): String =
+            "Напоминалка $hours:$minutes уже была поставлена до этого!"
+
+        fun removeTimeWrong(num: Int): String = "Напоминалки под номером $num не существует!"
+        fun removeTimeSuccess(task: DailyTaskExecutor): String =
+            "Напоминалка ${task.targetHour}:${task.targetMin} успешно отключена!"
+
     }
 }

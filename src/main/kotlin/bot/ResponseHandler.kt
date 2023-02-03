@@ -25,7 +25,7 @@ object ResponseHandler : ResponseHandlerInterface {
         var dialogMode: DialogMode,
         var currentIndex: Int,
         var emotions: List<String>?,
-        var dailyTaskExecutor: DailyTaskExecutor?
+        var dailyTaskExecutors: MutableList<DailyTaskExecutor>
     )
 
     private val mapClient = mutableMapOf<Long, ClientData>()
@@ -70,7 +70,7 @@ object ResponseHandler : ResponseHandlerInterface {
         val sheetsId = SheetsManager.createSpreadsheetFairy()
         SheetsManager.addClient(sheetsId, chatId.toString())
         createMessage(chatId, FOEBotMessages.START_MESSAGE)
-        mapClient[chatId] = ClientData(sheetsId, DialogMode.EMAIL, 0, mutableListOf(), null)
+        mapClient[chatId] = ClientData(sheetsId, DialogMode.EMAIL, 0, mutableListOf(), mutableListOf())
     }
 
     override fun tablesCommand(chatId: Long) {
@@ -156,7 +156,7 @@ object ResponseHandler : ResponseHandlerInterface {
     override fun getTimeCommand(chatId: Long) {
         try {
             mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
-            createMessage(chatId, FOEBotMessages.writeTime(mapClient[chatId]!!.dailyTaskExecutor))
+            createMessage(chatId, FOEBotMessages.writeTime(mapClient[chatId]!!.dailyTaskExecutors))
         } catch (e: Exception) {
             createMessage(chatId, FOEBotMessages.GET_TIME_ERROR)
             System.err.println("Something went wrong when getting time")
@@ -176,32 +176,44 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    override fun setTimeCommand(chatId: Long) {
+    override fun addTimeCommand(chatId: Long) {
         try {
-            createMessage(chatId, FOEBotMessages.SET_TIME)
-            mapClient[chatId]!!.dialogMode = DialogMode.SET_TIME
+            createMessage(chatId, FOEBotMessages.ADD_TIME)
+            mapClient[chatId]!!.dialogMode = DialogMode.ADD_TIME
         } catch (e: Exception) {
-            createMessage(chatId, FOEBotMessages.SET_TIME_ERROR)
+            createMessage(chatId, FOEBotMessages.ADD_TIME_ERROR)
             cancelCommand(chatId, false)
             System.err.println("Something went wrong when setting time")
             e.printStackTrace()
         }
     }
 
+    override fun removeTimeCommand(chatId: Long) {
+        try {
+            if (mapClient[chatId]!!.dailyTaskExecutors.isEmpty()) {
+                createMessage(chatId, FOEBotMessages.REMOVE_TIME_EMPTY)
+                mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
+            } else {
+                createMessage(chatId, FOEBotMessages.removeTime(mapClient[chatId]!!.dailyTaskExecutors))
+                mapClient[chatId]!!.dialogMode = DialogMode.REMOVE_TIME
+            }
+        } catch (e: Exception) {
+            createMessage(chatId, FOEBotMessages.REMOVE_TIME_ERROR)
+            cancelCommand(chatId, false)
+            System.err.println("Something went wrong when cancelling reminder")
+            e.printStackTrace()
+        }
+    }
+
     override fun cancelReminderCommand(chatId: Long) {
         try {
+            for (dailyTaskExecutor in mapClient[chatId]!!.dailyTaskExecutors) {
+                dailyTaskExecutor.stop()
+            }
+            mapClient[chatId]!!.dailyTaskExecutors = mutableListOf()
+            SheetsManager.cancelReminder(chatId.toString(), getSheetsId(chatId))
+            createMessage(chatId, FOEBotMessages.CANCEL_REMINDER_SUCCESS)
             mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
-            createMessage(chatId, FOEBotMessages.CANCEL_REMINDER)
-            if (isDailyExecutorNotNull(chatId)) {
-                mapClient[chatId]!!.dailyTaskExecutor!!.stop()
-                mapClient[chatId]!!.dailyTaskExecutor = null
-            }
-            try {
-                SheetsManager.cancelReminder(chatId.toString(), getSheetsId(chatId))
-                createMessage(chatId, FOEBotMessages.CANCEL_REMINDER_SUCCESS)
-            } catch (e: Exception) {
-                createMessage(chatId, FOEBotMessages.CANCEL_REMINDER_FAIL)
-            }
         } catch (e: Exception) {
             createMessage(chatId, FOEBotMessages.CANCEL_REMINDER_ERROR)
             System.err.println("Something went wrong when cancelling reminder")
@@ -209,15 +221,13 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    fun isDailyExecutorNotNull(chatId: Long) =
-        mapClient.containsKey(chatId) && mapClient[chatId]!!.dailyTaskExecutor != null
-
     override fun resetCommand(chatId: Long) {
         try {
             createMessage(chatId, FOEBotMessages.RESET_START)
             SheetsManager.deleteSpreadSheet(getSheetsId(chatId))
             createMessage(chatId, FOEBotMessages.RESET_STOP)
             createSpreadSheetCommand(chatId)
+            mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
         } catch (e: Exception) {
             createMessage(chatId, FOEBotMessages.RESET_ERROR)
             cancelCommand(chatId, false)
@@ -226,7 +236,10 @@ object ResponseHandler : ResponseHandlerInterface {
         }
     }
 
-    override fun supportCommand(chatId: Long) = createMessage(chatId, FOEBotMessages.SUPPORT)
+    override fun supportCommand(chatId: Long) {
+        createMessage(chatId, FOEBotMessages.SUPPORT)
+        mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
+    }
 
     override fun notCommand(chatId: Long, text: String) {
         try {
@@ -288,25 +301,62 @@ object ResponseHandler : ResponseHandlerInterface {
                         createMessage(chatId, FOEBotMessages.RATE_RETRY_NOT_INT)
                     }
                 }
-                DialogMode.SET_TIME -> {
+                DialogMode.ADD_TIME -> {
                     try {
-                        val hoursAndMinutes = text.split(":")
-                        val hours = hoursAndMinutes[0].toInt()
-                        val minutes = hoursAndMinutes[1].toInt()
-                        val dailyTaskExecutorValue = DailyTaskExecutor(ReminderTask(FOEBot), hours, minutes)
-                        dailyTaskExecutorValue.startExecution(chatId)
-                        if (isDailyExecutorNotNull(chatId)) {
-                            mapClient[chatId]!!.dailyTaskExecutor!!.stop()
+                        val requests = text.split(",")
+                        for (request in requests) {
+                            try {
+                                val hoursAndMinutes = request.split(":")
+                                val hours = hoursAndMinutes[0].filterNot { it.isWhitespace() }.toInt()
+                                val minutes = hoursAndMinutes[1].filterNot { it.isWhitespace() }.toInt()
+                                val dailyTaskExecutorValue = DailyTaskExecutor(
+                                    ReminderTask(FOEBot),
+                                    hours, minutes, chatId
+                                )
+                                if (mapClient[chatId]!!.dailyTaskExecutors.contains(dailyTaskExecutorValue)) {
+                                    createMessage(chatId, FOEBotMessages.setTimeAlreadyExists(hours, minutes))
+                                } else {
+                                    dailyTaskExecutorValue.startExecution()
+                                    mapClient[chatId]!!.dailyTaskExecutors.add(dailyTaskExecutorValue)
+                                    createMessage(chatId, FOEBotMessages.setTimeSuccess(hours, minutes))
+                                }
+                                updateDailyTaskExecutors(chatId)
+                            } catch (e: Exception) {
+                                createMessage(chatId, FOEBotMessages.SET_TIME_FAIL)
+                            }
                         }
-                        mapClient[chatId]!!.dailyTaskExecutor = dailyTaskExecutorValue
-                        SheetsManager.setTime(chatId.toString(), getSheetsId(chatId), hours, minutes)
-                        createMessage(chatId, FOEBotMessages.SET_TIME_SUCCESS)
                     } catch (e: Exception) {
                         createMessage(chatId, FOEBotMessages.SET_TIME_FAIL)
                     }
                     mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
                 }
-                else -> createMessage(chatId, FOEBotMessages.UNKNOWN_MESSAGE)
+                DialogMode.REMOVE_TIME -> {
+                    try {
+                        val requests = text.split(",")
+                        val tasks = mutableListOf<DailyTaskExecutor>()
+                        for (request in requests) {
+                            val num = request.filterNot { it.isWhitespace() }.toInt()
+                            if (num < 1 || num > requests.size) {
+                                createMessage(chatId, FOEBotMessages.removeTimeWrong(num))
+                            } else {
+                                tasks.add(mapClient[chatId]!!.dailyTaskExecutors[num - 1])
+                            }
+                        }
+                        for (task in tasks) {
+                            task.stop()
+                            createMessage(chatId, FOEBotMessages.removeTimeSuccess(task))
+                            mapClient[chatId]!!.dailyTaskExecutors.remove(task)
+                        }
+                        updateDailyTaskExecutors(chatId)
+                    } catch (e: Exception) {
+                        createMessage(chatId, FOEBotMessages.REMOVE_TIME_FAIL)
+                    }
+                    mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
+                }
+                else -> {
+                    createMessage(chatId, FOEBotMessages.UNKNOWN_MESSAGE)
+                    mapClient[chatId]!!.dialogMode = DialogMode.DEFAULT
+                }
             }
         } catch (e: Exception) {
             createMessage(chatId, FOEBotMessages.NOT_COMMAND_ERROR)
@@ -314,6 +364,10 @@ object ResponseHandler : ResponseHandlerInterface {
             System.err.println("Something went wrong when parsing not command")
             e.printStackTrace()
         }
+    }
+
+    private fun updateDailyTaskExecutors(chatId: Long) {
+        SheetsManager.setTime(chatId.toString(), getSheetsId(chatId), mapClient[chatId]!!.dailyTaskExecutors)
     }
 
     private fun getSheetsId(chatId: Long) = mapClient[chatId]!!.sheetsId!!

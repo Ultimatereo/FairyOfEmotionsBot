@@ -3,7 +3,6 @@ package bot
 import constants.FOEBotMessages
 import daily.ReminderTask
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import properties.ProjectProperties
 
@@ -12,8 +11,6 @@ object FOEBot : FOEBotAbstract() {
     init {
         ResponseHandler
     }
-//    TODO("СДЕЛАЙ АДЕКВАТНЫЕ ЛОГИ")
-//    TODO("СДЕЛАЙН НЕСКОЛЬКО НАПОМИНАЛОК")
 
     private var token = ""
     override fun getBotToken(): String {
@@ -54,7 +51,8 @@ object FOEBot : FOEBotAbstract() {
             "/get_emotions" -> ResponseHandler.getEmotionsCommand(chatId)
             "/get_time" -> ResponseHandler.getTimeCommand(chatId)
             "/link_email" -> ResponseHandler.linkEmailCommand(chatId)
-            "/set_time" -> ResponseHandler.setTimeCommand(chatId)
+            "/add_time" -> ResponseHandler.addTimeCommand(chatId)
+            "/remove_time" -> ResponseHandler.removeTimeCommand(chatId)
             "/cancel_reminder" -> ResponseHandler.cancelReminderCommand(chatId)
             "/reset" -> ResponseHandler.resetCommand(chatId)
             "/support" -> ResponseHandler.supportCommand(chatId)

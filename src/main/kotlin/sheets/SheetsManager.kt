@@ -75,7 +75,7 @@ object SheetsManager {
 
     private const val emotionRange = "Эмоции!A2:A"
     private const val ratesRange = "Записи!A2:A"
-    private const val dataRange = "data!A2:D"
+    private const val dataRange = "data!A2:Y"
     private const val insertDataOption = "INSERT_ROWS"
     private const val valueInputOption = "USER_ENTERED"
 
@@ -168,43 +168,45 @@ object SheetsManager {
     ) {
         val request = sheetsService.spreadsheets().values().get(sheetsDataId, dataRange)
         val response = request.execute()
-        var sheetsId: String?
-        var dailyTaskExecutor: DailyTaskExecutor? = null
         val values = response.getValues() ?: return
         for (row in values) {
             val chatId = row[0].toString().toLong()
-            val sheetsIdValue = row[1].toString()
-            sheetsId = sheetsIdValue
-            if (row.size == 4 && row[2].toString().isNotEmpty() && row[3].toString().isNotEmpty()) {
-                val dailyTask = DailyTaskExecutor(
-                    ReminderTask(callback),
-                    row[2].toString().toInt(), row[3].toString().toInt()
-                )
-                dailyTask.startExecution(chatId)
-                if (ResponseHandler.isDailyExecutorNotNull(chatId)) {
-                    mapClient[chatId]!!.dailyTaskExecutor!!.stop()
-                }
-                dailyTaskExecutor = dailyTask
-            } else if (ResponseHandler.isDailyExecutorNotNull(chatId)) {
-                mapClient[chatId]!!.dailyTaskExecutor!!.stop()
-            }
+            val sheetsId = row[1].toString()
             if (mapClient.containsKey(chatId)) {
-                mapClient[chatId]!!.sheetsId = sheetsId
-                mapClient[chatId]!!.dailyTaskExecutor = dailyTaskExecutor
-            } else {
-                mapClient[chatId] = ResponseHandler.ClientData(
-                    sheetsId,
-                    DialogMode.DEFAULT,
-                    0,
-                    null,
-                    dailyTaskExecutor
-                )
+                for (dailyTaskExecutor in mapClient[chatId]!!.dailyTaskExecutors) {
+                    dailyTaskExecutor.stop()
+                }
             }
+            val dailyTaskExecutors = mutableListOf<DailyTaskExecutor>()
+            for (i in 2 until row.size step 2) {
+                if (row[i].toString().isNotEmpty() && row[i + 1].toString().isNotEmpty()) {
+                    val dailyTaskExecutor = DailyTaskExecutor(
+                        ReminderTask(callback),
+                        row[i].toString().toInt(),
+                        row[i + 1].toString().toInt(),
+                        chatId
+                    )
+                    dailyTaskExecutor.startExecution()
+                    dailyTaskExecutors.add(dailyTaskExecutor)
+                }
+            }
+            mapClient[chatId] = ResponseHandler.ClientData(
+                sheetsId,
+                DialogMode.DEFAULT,
+                0,
+                null,
+                dailyTaskExecutors
+            )
         }
     }
 
-    fun setTime(chatId: String, sheetsId: String, hours: Int, minutes: Int) {
-        insertRow(mutableListOf(chatId, sheetsId, hours.toString(), minutes.toString()), dataRange, sheetsDataId)
+    fun setTime(chatId: String, sheetsId: String, dailyTaskExecutors: MutableList<DailyTaskExecutor>) {
+        val list = mutableListOf(chatId, sheetsId)
+        for (dailyTaskExecutor in dailyTaskExecutors) {
+            list.add(dailyTaskExecutor.targetHour.toString())
+            list.add(dailyTaskExecutor.targetMin.toString())
+        }
+        insertRow(list, dataRange, sheetsDataId)
     }
 
     fun cancelReminder(chatId: String, sheetsId: String) {

@@ -9,12 +9,18 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 
-class DailyTaskExecutor(val dailyTask: DailyTask, val targetHour: Int, val targetMin: Int, val targetSec: Int = 0) {
+class DailyTaskExecutor(
+    private val dailyTask: DailyTask,
+    val targetHour: Int,
+    val targetMin: Int,
+    private val chatId: Long,
+    private val targetSec: Int = 0
+) : Comparable<DailyTaskExecutor> {
     private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
-    fun startExecution(chatId: Long) {
+    fun startExecution() {
         val taskWrapper = Runnable {
             dailyTask.execute(chatId)
-            startExecution(chatId)
+            startExecution()
         }
         val delay = computeNextDelay(targetHour, targetMin, targetSec)
         executorService.schedule(taskWrapper, delay, TimeUnit.SECONDS)
@@ -33,4 +39,31 @@ class DailyTaskExecutor(val dailyTask: DailyTask, val targetHour: Int, val targe
     fun stop() {
         executorService.shutdownNow()
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as DailyTaskExecutor
+
+        if (targetHour != other.targetHour) return false
+        if (targetMin != other.targetMin) return false
+        if (chatId != other.chatId) return false
+        if (targetSec != other.targetSec) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = targetHour
+        result = 31 * result + targetMin
+        result = 31 * result + chatId.hashCode()
+        result = 31 * result + targetSec
+        return result
+    }
+
+    override fun compareTo(other: DailyTaskExecutor): Int {
+        return (60 * targetHour + targetMin).compareTo(60 * other.targetHour + targetMin)
+    }
+
 }
