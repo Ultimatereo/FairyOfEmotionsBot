@@ -20,7 +20,7 @@ object ResponseHandler : ResponseHandlerInterface {
         return EMAIL_REGEX.matches(email)
     }
 
-    class ClientData(
+    data class ClientData(
         var sheetsId: String?,
         var dialogMode: DialogMode,
         var currentIndex: Int,
