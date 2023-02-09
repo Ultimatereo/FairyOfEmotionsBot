@@ -6,8 +6,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.objects.Update
 import properties.ProjectProperties
 
-abstract class FOEBotAbstract : TelegramLongPollingBot(), ReminderTask.Callback
-object FOEBot : FOEBotAbstract() {
+object FOEBot : TelegramLongPollingBot(), ReminderTask.Callback {
     init {
         ResponseHandler
     }
