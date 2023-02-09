@@ -1,0 +1,6 @@
+/src/main/resources/main.properties
+/src/main/resources/sheets.properties
+/.gradle/
+/build/
+/.idea/
+/src/main/resources/credentials.json
